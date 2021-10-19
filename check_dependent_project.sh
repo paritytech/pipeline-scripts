@@ -185,7 +185,9 @@ process_companion_pr() {
       .head.ref // error(\"Missing .head.ref from API data of $companion_expr\"),
       .head.sha // error(\"Missing .head.sha from API data of $companion_expr\")
     ] | .[]"
-  )
+  # https://stackoverflow.com/questions/40547032/bash-read-returns-with-exit-code-1-even-though-it-runs-as-expected
+  # ignore the faulty exit code since read still is regardless still reading the values we want
+  ) || :
 
   local expected_mergeable=true
   if [ "$mergeable" != "$expected_mergeable" ]; then
