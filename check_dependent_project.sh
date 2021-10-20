@@ -229,12 +229,23 @@ main() {
 
     while IFS= read -r line; do
       last_line="$line"
-      if ! [[ "$line" =~ [cC]ompanion:[[:space:]]*([^[:space:]]+) ]]; then
-        continue
-      fi
 
-      echo "detected companion in PR description: ${BASH_REMATCH[1]}"
-      process_companion_pr "${BASH_REMATCH[1]}"
+      if [[ "$line" =~ [cC]ompanion:[[:space:]]*([^[:space:]]+) ]]; then
+        echo "Detected companion in PR description: ${BASH_REMATCH[1]}"
+        process_companion_pr "${BASH_REMATCH[1]}"
+      elif [[ "$line" =~ skip[^[:alnum:]]+([^[:space:]]+) ]]; then
+        # FIXME: This escape hatch should be removed at some point when the
+        # companion build system is able to deal with all edge cases, such as
+        # the one described in
+        # https://github.com/paritytech/pipeline-scripts/issues/3#issuecomment-947539791
+        if [[
+          "${BASH_REMATCH[1]}" = "$CI_JOB_NAME" ||
+          "${BASH_REMATCH[1]}" = "continuous-integration/gitlab-$CI_JOB_NAME"
+        ]]; then
+          echo "Skipping $CI_JOB_NAME as specified in the PR description"
+          exit
+        fi
+      fi
     done < <(curl \
         -sSL \
         -H "Authorization: token $GITHUB_TOKEN" \
