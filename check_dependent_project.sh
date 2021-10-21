@@ -150,7 +150,9 @@ match_their_crates() {
 }
 
 patch_and_check_dependent() {
-  match_their_crates "$(basename "$PWD")"
+  local repo_name="$(basename "$PWD")"
+  echo "patching $repo_name at SHA $(git rev-parse --abbrev-ref HEAD)"
+  match_their_crates "$repo_name"
   diener patch --crates-to-patch "$this_repo_dir" "$this_repo_diener_arg" --path "Cargo.toml"
   eval "${COMPANION_CHECK_COMMAND:-cargo check --all-targets --workspace}"
 }
