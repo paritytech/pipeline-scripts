@@ -212,8 +212,7 @@ main() {
   git config --global pull.rebase true
 
   # Merge master into our branch so that the compilation takes into account how the code is going to
-  # going to perform when the code for this pull request lands on the target branch (à la pre-merge
-  # pipelines).
+  # perform when the code for this pull request lands on the target branch (à la pre-merge pipelines).
   # Note that the target branch might not actually be master, but we default to it in the assumption
   # of the common case. This could be refined in the future.
   git pull origin master
