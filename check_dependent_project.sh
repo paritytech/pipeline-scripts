@@ -198,6 +198,7 @@ process_companion_pr() {
   pushd "$companion_repo" >/dev/null
   git fetch origin "pull/$companion_pr_number/head:$pr_head_ref"
   git checkout "$pr_head_sha"
+  git merge master
 
   echo "running checks for the companion $companion_expr of $companion_repo"
   patch_and_check_dependent
