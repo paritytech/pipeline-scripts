@@ -209,7 +209,7 @@ main() {
   # Set the user name and email to make merging work
   git config --global user.name 'CI system'
   git config --global user.email '<>'
-  git config --global pull.rebase false
+  git config --global pull.rebase true
 
   # Merge master into our branch so that the compilation takes into account how the code is going to
   # going to perform when the code for this pull request lands on the target branch (à la pre-merge
