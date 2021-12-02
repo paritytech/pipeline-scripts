@@ -36,7 +36,7 @@ this_repo="$2"
 this_repo_diener_arg="$3"
 dependent_repo="$4"
 github_api_token="$5"
-update_crates_on_default_branch="$5"
+update_crates_on_default_branch="$6"
 
 this_repo_dir="$PWD"
 github_api="https://api.github.com"
