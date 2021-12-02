@@ -36,6 +36,7 @@ this_repo="$2"
 this_repo_diener_arg="$3"
 dependent_repo="$4"
 github_api_token="$5"
+update_crates_on_default_branch="$5"
 
 this_repo_dir="$PWD"
 github_api="https://api.github.com"
@@ -151,6 +152,15 @@ match_their_crates() {
 
 patch_and_check_dependent() {
   match_their_crates "$(basename "$PWD")"
+
+  # Update the crates to the latest version.
+  #
+  # This is for example needed if there was a pr to Substrate that only required a Polkadot companion
+  # and Cumulus wasn't yet updated to use the latest commit of Polkadot.
+  for update in $update_crates_on_default_branch; do
+    cargo update -p $update
+  done
+
   diener patch --crates-to-patch "$this_repo_dir" "$this_repo_diener_arg" --path "Cargo.toml"
   eval "${COMPANION_CHECK_COMMAND:-cargo check --all-targets --workspace}"
 }
@@ -171,6 +181,7 @@ process_companion_pr() {
   fi
 
   if [ "$companion_repo" != "$dependent_repo" ]; then
+    echo "companion repo $companion_repo doesn't match dependent repo $dependent_repo. Check that you pasted the pure link to the companion."
     return
   fi
 
@@ -265,6 +276,14 @@ main() {
 
   git clone --depth 1 "https://github.com/$org/$dependent_repo.git"
   pushd "$dependent_repo" >/dev/null
+
+  # Update the crates to the latest version.
+  #
+  # This is for example needed if there was a pr to Substrate that only required a Polkadot companion
+  # and Cumulus wasn't yet updated to use the latest commit of Polkadot.
+  for update in $update_crates_on_default_branch; do
+    cargo update -p $update
+  done
 
   patch_and_check_dependent
 
