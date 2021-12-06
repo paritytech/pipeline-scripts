@@ -21,7 +21,7 @@ changes.
 
 "
 
-set -eu -o pipefail
+set -eux -o pipefail
 shopt -s inherit_errexit
 
 die() {
@@ -207,9 +207,10 @@ process_companion_pr() {
 
   git clone --depth 1 "https://github.com/$org/$companion_repo.git"
   pushd "$companion_repo" >/dev/null
-  git fetch origin "pull/$companion_pr_number/head:$pr_head_ref"
+  git fetch origin +master:master
+  git fetch origin "+pull/$companion_pr_number/head:$pr_head_ref"
   git checkout "$pr_head_sha"
-  git merge master
+  git merge master --verbose --no-edit
 
   echo "running checks for the companion $companion_expr of $companion_repo"
   patch_and_check_dependent
@@ -229,10 +230,10 @@ main() {
   # perform when the code for this pull request lands on the target branch (à la pre-merge pipelines).
   # Note that the target branch might not actually be master, but we default to it in the assumption
   # of the common case. This could be refined in the future.
-  git fetch origin +master:master;
-  git fetch origin +$CI_COMMIT_REF_NAME:$CI_COMMIT_REF_NAME;
-  git checkout master;
-  git merge $CI_COMMIT_REF_NAME --verbose --no-edit;
+  git fetch origin +master:master
+  git fetch origin +$CI_COMMIT_REF_NAME:$CI_COMMIT_REF_NAME
+  git checkout $CI_COMMIT_REF_NAME
+  git merge master --verbose --no-edit
   echo "done"
   echo
 
