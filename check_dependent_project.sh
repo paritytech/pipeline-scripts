@@ -221,13 +221,20 @@ main() {
   # Set the user name and email to make merging work
   git config --global user.name 'CI system'
   git config --global user.email '<>'
-  git config --global pull.rebase true
+  git config --global pull.rebase false
 
+  echo
+  echo "switching to master, merging the pr into master..."
   # Merge master into our branch so that the compilation takes into account how the code is going to
   # perform when the code for this pull request lands on the target branch (à la pre-merge pipelines).
   # Note that the target branch might not actually be master, but we default to it in the assumption
   # of the common case. This could be refined in the future.
-  git pull origin master
+  git fetch origin +master:master;
+  git fetch origin +$CI_COMMIT_REF_NAME:$CI_COMMIT_REF_NAME;
+  git checkout master;
+  git merge $CI_COMMIT_REF_NAME --verbose --no-edit;
+  echo "done"
+  echo
 
   discover_our_crates
 
