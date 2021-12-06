@@ -205,11 +205,16 @@ process_companion_pr() {
     die "Github API says $companion_expr is not mergeable (got $mergeable, expected $expected_mergeable)"
   fi
 
+  echo
+  echo "merging master into the pr..."
   git clone --depth 1 "https://github.com/$org/$companion_repo.git"
   pushd "$companion_repo" >/dev/null
-  git fetch origin "pull/$companion_pr_number/head:$pr_head_ref"
+  git fetch origin +master:master
+  git fetch origin "+pull/$companion_pr_number/head:$pr_head_ref"
   git checkout "$pr_head_sha"
-  git merge master
+  git merge master --verbose --no-edit -m "master was merged into the pr by check_dependent_project.sh process_companion_pr()"
+  echo "done"
+  echo
 
   echo "running checks for the companion $companion_expr of $companion_repo"
   patch_and_check_dependent
@@ -221,13 +226,20 @@ main() {
   # Set the user name and email to make merging work
   git config --global user.name 'CI system'
   git config --global user.email '<>'
-  git config --global pull.rebase true
+  git config --global pull.rebase false
 
+  echo
+  echo "merging master into the pr..."
   # Merge master into our branch so that the compilation takes into account how the code is going to
   # perform when the code for this pull request lands on the target branch (à la pre-merge pipelines).
   # Note that the target branch might not actually be master, but we default to it in the assumption
   # of the common case. This could be refined in the future.
-  git pull origin master
+  git fetch origin +master:master
+  git fetch origin +$CI_COMMIT_REF_NAME:$CI_COMMIT_REF_NAME
+  git checkout $CI_COMMIT_REF_NAME
+  git merge master --verbose --no-edit -m "master was merged into the pr by check_dependent_project.sh main()"
+  echo "done"
+  echo
 
   discover_our_crates
 
