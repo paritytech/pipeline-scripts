@@ -209,8 +209,7 @@ process_companion_pr() {
   echo "merging master into the pr..."
   git clone --depth 1 "https://github.com/$org/$companion_repo.git"
   pushd "$companion_repo" >/dev/null
-  git fetch origin +master:master
-  git fetch origin "+pull/$companion_pr_number/head:$pr_head_ref"
+  git fetch origin "pull/$companion_pr_number/head:$pr_head_ref"
   git checkout "$pr_head_sha"
   git merge master --verbose --no-edit -m "master was merged into the pr by check_dependent_project.sh process_companion_pr()"
   echo "done"
