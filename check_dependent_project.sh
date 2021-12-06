@@ -21,7 +21,7 @@ changes.
 
 "
 
-set -eu -o pipefail
+set -eux -o pipefail
 shopt -s inherit_errexit
 
 die() {
@@ -209,7 +209,7 @@ process_companion_pr() {
   pushd "$companion_repo" >/dev/null
   git fetch origin "pull/$companion_pr_number/head:$pr_head_ref"
   git checkout "$pr_head_sha"
-  git merge master
+  git merge origin/master -m "Rebase on master done by pipeline_scripts/check_dependent_project.sh in CI"
 
   echo "running checks for the companion $companion_expr of $companion_repo"
   patch_and_check_dependent
@@ -221,13 +221,13 @@ main() {
   # Set the user name and email to make merging work
   git config --global user.name 'CI system'
   git config --global user.email '<>'
-  git config --global pull.rebase true
+  git config --global pull.rebase false
 
   # Merge master into our branch so that the compilation takes into account how the code is going to
   # perform when the code for this pull request lands on the target branch (à la pre-merge pipelines).
   # Note that the target branch might not actually be master, but we default to it in the assumption
   # of the common case. This could be refined in the future.
-  git pull origin master
+  git merge origin/master -m "Rebase on master done by pipeline_scripts/check_dependent_project.sh in CI"
 
   discover_our_crates
 
