@@ -212,7 +212,9 @@ process_companion_pr() {
   git fetch origin +master:master
   git fetch origin "+pull/$companion_pr_number/head:$pr_head_ref"
   git checkout "$pr_head_sha"
-  git merge master --verbose --no-edit
+  git merge master --verbose --no-edit -m "master was merged into the pr by check_dependent_project.sh process_companion_pr()"
+  echo "done"
+  echo
 
   echo "running checks for the companion $companion_expr of $companion_repo"
   patch_and_check_dependent
@@ -235,7 +237,7 @@ main() {
   git fetch origin +master:master
   git fetch origin +$CI_COMMIT_REF_NAME:$CI_COMMIT_REF_NAME
   git checkout $CI_COMMIT_REF_NAME
-  git merge master --verbose --no-edit
+  git merge master --verbose --no-edit -m "master was merged into the pr by check_dependent_project.sh main()"
   echo "done"
   echo
 
