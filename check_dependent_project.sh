@@ -207,7 +207,7 @@ process_companion_pr() {
 
   echo
   echo "merging master into the pr..."
-  git clone --depth 1 "https://github.com/$org/$companion_repo.git"
+  git clone --depth 100 "https://github.com/$org/$companion_repo.git"
   pushd "$companion_repo" >/dev/null
   git fetch origin "pull/$companion_pr_number/head:$pr_head_ref"
   git checkout "$pr_head_sha"
