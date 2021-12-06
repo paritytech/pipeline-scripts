@@ -21,7 +21,7 @@ changes.
 
 "
 
-set -eux -o pipefail
+set -eu -o pipefail
 shopt -s inherit_errexit
 
 die() {
@@ -205,6 +205,8 @@ process_companion_pr() {
     die "Github API says $companion_expr is not mergeable (got $mergeable, expected $expected_mergeable)"
   fi
 
+  echo
+  echo "merging master into the pr..."
   git clone --depth 1 "https://github.com/$org/$companion_repo.git"
   pushd "$companion_repo" >/dev/null
   git fetch origin +master:master
@@ -225,7 +227,7 @@ main() {
   git config --global pull.rebase false
 
   echo
-  echo "switching to master, merging the pr into master..."
+  echo "merging master into the pr..."
   # Merge master into our branch so that the compilation takes into account how the code is going to
   # perform when the code for this pull request lands on the target branch (à la pre-merge pipelines).
   # Note that the target branch might not actually be master, but we default to it in the assumption
