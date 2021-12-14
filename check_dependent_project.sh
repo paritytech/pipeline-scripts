@@ -39,7 +39,12 @@ github_api_token="$5"
 update_crates_on_default_branch="$6"
 
 this_repo_dir="$PWD"
+companions_dir="$this_repo_dir/companions"
 github_api="https://api.github.com"
+
+# valid for 69ab0f76fb851968af8e493061cca84a2f3b1c5b
+# FIXME: extract this information from the diener CLI when that is supported
+diener_patch_targets=(substrate polkadot cumulus)
 
 our_crates=()
 our_crates_source="git+https://github.com/$org/$this_repo"
@@ -150,73 +155,142 @@ match_their_crates() {
   fi
 }
 
+companions=()
+process_pr_description_line() {
+  local companion_expr="$1"
+
+  # e.g. https://github.com/paritytech/polkadot/pull/123
+  # or   polkadot#123
+  if
+    [[ "$companion_expr" =~ ^https://github\.com/$org/([^/]+)/pull/([[:digit:]]+) ]] ||
+    [[ "$companion_expr" =~ ^$org/([^#]+)#([[:digit:]]+) ]] ||
+    [[ "$companion_expr" =~ ^([^#]+)#([[:digit:]]+) ]]
+  then
+    local repo="${BASH_REMATCH[1]}"
+    local pr_number="${BASH_REMATCH[2]}"
+
+    echo "Parsed companion repo=$repo and pr_number=$pr_number from $companion_expr"
+
+    if [ "$this_repo" == "$repo" ]; then
+      echo "Skipping $companion_expr it refers to the repository where this script is currently running"
+      return
+    fi
+
+    # keep track of duplicated companion references not only to avoid useless
+    # work but also to avoid infinite mutual recursion when 2+ PRs reference
+    # each other
+    for comp in "${companions[@]}"; do
+      if [ "$comp" == "$repo" ]; then
+        echo "Skipping $companion_expr as the repository $repo has already been registered before"
+        return
+      fi
+    done
+    companions+=("$repo")
+
+    git clone --depth=1 "https://github.com/$org/$repo.git" "$companions_dir/$repo"
+    pushd "$repo" >/dev/null
+    local ref="$(curl \
+        -sSL \
+        -H "Authorization: token $github_api_token" \
+        "$github_api/repos/$org/$repo/pulls/$pr_number" | \
+      jq -e -r ".head.ref // error(\"$repo#$pr_number is missing head.ref\"))"
+    )"
+    git fetch --depth=1 origin "pull/$pr_number/head:$ref"
+    git checkout "$ref"
+    popd >/dev/null
+
+    # collect also the companions of companions
+    process_pr_description "$repo" "$pr_number"
+  else
+    die "Companion PR description had invalid format or did not belong to organization $org: $companion_expr"
+  fi
+}
+
+process_pr_description() {
+  local repo="$1"
+  local pr_number="$2"
+
+  if ! [[ "$pr_number" =~ ^[[:digit:]]+$ ]]; then
+    return
+  fi
+
+  echo "processing pull request $repo#$pr_number"
+
+  local lines=()
+  while IFS= read -r line; do
+    lines+=("$line")
+  done < <(curl \
+      -sSL \
+      -H "Authorization: token $github_api_token" \
+      "$github_api/repos/$org/$this_repo/pulls/$CI_COMMIT_REF_NAME" | \
+    jq -e -r ".body"
+  )
+  if [ ! "${lines[@]:-}" ]; then
+    die "No lines were read for the description of PR $pr_number (some error probably occurred)"
+  fi
+
+  # first check if the companion is disabled *somewhere* in the PR description
+  # before doing any work
+  for line in "${lines[@]}"; do
+    if
+      [[ "$line" =~ skip[^[:alnum:]]+([^[:space:]]+) ]] &&
+      [[ "$repo" == "$dependent_repo" ]] &&
+      [[
+        "${BASH_REMATCH[1]}" = "$CI_JOB_NAME" ||
+        "${BASH_REMATCH[1]}" = "continuous-integration/gitlab-$CI_JOB_NAME"
+      ]]
+    then
+      # FIXME: This escape hatch should be removed at some point when the
+      # companion build system is able to deal with all edge cases, such as
+      # the one described in
+      # https://github.com/paritytech/pipeline-scripts/issues/3#issuecomment-947539791
+      echo "Skipping $CI_JOB_NAME as specified in the PR description"
+      exit
+    fi
+  done
+
+  for line in "${lines[@]}"; do
+    if [[ "$line" =~ [cC]ompanion:[[:space:]]*([^[:space:]]+) ]]; then
+      echo "Detected companion in the PR description of $repo#$pr_number: ${BASH_REMATCH[1]}"
+      process_pr_description_line "${BASH_REMATCH[1]}"
+    fi
+  done
+}
+
 patch_and_check_dependent() {
-  match_their_crates "$(basename "$PWD")"
+  local dependent="$1"
+
+  pushd "$dependent" >/dev/null
+
+  match_their_crates "$dependent"
 
   # Update the crates to the latest version.
   #
   # This is for example needed if there was a pr to Substrate that only required a Polkadot companion
   # and Cumulus wasn't yet updated to use the latest commit of Polkadot.
   for update in $update_crates_on_default_branch; do
-    cargo update -p $update
+    cargo update -p "$update"
+  done
+
+  for comp in "${companions[@]}"; do
+    local found
+    for diener_target in "${diener_patch_targets[@]}"; do
+      if [ "$diener_target" = "$comp" ]; then
+        echo "Patching $comp into $dependent"
+        diener patch --crates-to-patch "--$diener_target" "$companions_dir/$comp" --path "Cargo.toml"
+        found=true
+        break
+      fi
+    done
+    if [ "${found:-}" ]; then
+      unset found
+    else
+      echo "NOTE: Companion $comp was specified but not patched through diener. Perhaps diener does not support it."
+    fi
   done
 
   diener patch --crates-to-patch "$this_repo_dir" "$this_repo_diener_arg" --path "Cargo.toml"
   eval "${COMPANION_CHECK_COMMAND:-cargo check --all-targets --workspace}"
-}
-
-process_companion_pr() {
-  # e.g. https://github.com/paritytech/polkadot/pull/123
-  # or   polkadot#123
-  local companion_expr="$1"
-  if
-    [[ "$companion_expr" =~ ^https://github\.com/$org/([^/]+)/pull/([[:digit:]]+) ]] ||
-    [[ "$companion_expr" =~ ^$org/([^#]+)#([[:digit:]]+) ]] ||
-    [[ "$companion_expr" =~ ^([^#]+)#([[:digit:]]+) ]]; then
-    local companion_repo="${BASH_REMATCH[1]}"
-    local companion_pr_number="${BASH_REMATCH[2]}"
-    echo "Parsed companion_repo=$companion_repo and companion_pr_number=$companion_pr_number from $companion_expr (trying to match companion_repo=$dependent_repo)"
-  else
-    die "Companion PR description had invalid format or did not belong to organization $org: $companion_expr"
-  fi
-
-  if [ "$companion_repo" != "$dependent_repo" ]; then
-    echo "companion repo $companion_repo doesn't match dependent repo $dependent_repo. Check that you pasted the pure link to the companion."
-    return
-  fi
-
-  was_companion_found=true
-
-  read -d '\n' -r mergeable pr_head_ref pr_head_sha < <(curl \
-      -sSL \
-      -H "Authorization: token $github_api_token" \
-      "$github_api/repos/$org/$companion_repo/pulls/$companion_pr_number" | \
-    jq -r "[
-      .mergeable // error(\"Companion $companion_expr is not mergeable\"),
-      .head.ref // error(\"Missing .head.ref from API data of $companion_expr\"),
-      .head.sha // error(\"Missing .head.sha from API data of $companion_expr\")
-    ] | .[]"
-  # https://stackoverflow.com/questions/40547032/bash-read-returns-with-exit-code-1-even-though-it-runs-as-expected
-  # ignore the faulty exit code since read still is regardless still reading the values we want
-  ) || :
-
-  local expected_mergeable=true
-  if [ "$mergeable" != "$expected_mergeable" ]; then
-    die "Github API says $companion_expr is not mergeable (got $mergeable, expected $expected_mergeable)"
-  fi
-
-  echo
-  echo "merging master into the pr..."
-  git clone --depth 100 "https://github.com/$org/$companion_repo.git"
-  pushd "$companion_repo" >/dev/null
-  git fetch origin "pull/$companion_pr_number/head:$pr_head_ref"
-  git checkout "$pr_head_sha"
-  git merge master --verbose --no-edit -m "master was merged into the pr by check_dependent_project.sh process_companion_pr()"
-  echo "done"
-  echo
-
-  echo "running checks for the companion $companion_expr of $companion_repo"
-  patch_and_check_dependent
 
   popd >/dev/null
 }
@@ -234,70 +308,16 @@ main() {
   # Note that the target branch might not actually be master, but we default to it in the assumption
   # of the common case. This could be refined in the future.
   git fetch origin +master:master
-  git fetch origin +$CI_COMMIT_REF_NAME:$CI_COMMIT_REF_NAME
-  git checkout $CI_COMMIT_REF_NAME
+  git fetch origin "+$CI_COMMIT_REF_NAME:$CI_COMMIT_REF_NAME"
+  git checkout "$CI_COMMIT_REF_NAME"
   git merge master --verbose --no-edit -m "master was merged into the pr by check_dependent_project.sh main()"
-  echo "done"
+  echo "merging master into the pr: done"
   echo
 
   discover_our_crates
 
-  if [[ "$CI_COMMIT_REF_NAME" =~ ^[[:digit:]]+$ ]]; then
-    echo "this is pull request number $CI_COMMIT_REF_NAME"
+  process_pr_description "$this_repo" "$CI_COMMIT_REF_NAME"
 
-    # workaround for early exits not being detected in command substitution
-    # https://unix.stackexchange.com/questions/541969/nested-command-substitution-does-not-stop-a-script-on-a-failure-even-if-e-and-s
-    local last_line
-
-    while IFS= read -r line; do
-      last_line="$line"
-
-      if [[ "$line" =~ [cC]ompanion:[[:space:]]*([^[:space:]]+) ]]; then
-        echo "Detected companion in PR description: ${BASH_REMATCH[1]}"
-        process_companion_pr "${BASH_REMATCH[1]}"
-      elif [[ "$line" =~ skip[^[:alnum:]]+([^[:space:]]+) ]]; then
-        # FIXME: This escape hatch should be removed at some point when the
-        # companion build system is able to deal with all edge cases, such as
-        # the one described in
-        # https://github.com/paritytech/pipeline-scripts/issues/3#issuecomment-947539791
-        if [[
-          "${BASH_REMATCH[1]}" = "$CI_JOB_NAME" ||
-          "${BASH_REMATCH[1]}" = "continuous-integration/gitlab-$CI_JOB_NAME"
-        ]]; then
-          echo "Skipping $CI_JOB_NAME as specified in the PR description"
-          exit
-        fi
-      fi
-    done < <(curl \
-        -sSL \
-        -H "Authorization: token $GITHUB_TOKEN" \
-        "$github_api/repos/$org/$this_repo/pulls/$CI_COMMIT_REF_NAME" | \
-      jq -e -r ".body"
-    )
-    if [ -z "${last_line+_}" ]; then
-      die "No lines were read for the description of PR $companion_pr_number (some error probably occurred)"
-    fi
-  fi
-
-  if [ "${was_companion_found:-}" ]; then
-    exit
-  fi
-
-  echo "running checks for the default branch of $dependent_repo"
-
-  git clone --depth 1 "https://github.com/$org/$dependent_repo.git"
-  pushd "$dependent_repo" >/dev/null
-
-  # Update the crates to the latest version.
-  #
-  # This is for example needed if there was a pr to Substrate that only required a Polkadot companion
-  # and Cumulus wasn't yet updated to use the latest commit of Polkadot.
-  for update in $update_crates_on_default_branch; do
-    cargo update -p $update
-  done
-
-  patch_and_check_dependent
-
-  popd >/dev/null
+  patch_and_check_dependent "$dependent_repo"
 }
 main
