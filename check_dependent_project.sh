@@ -283,8 +283,10 @@ patch_and_check_dependent() {
       --path "Cargo.toml"
   done
 
+  echo "Patching $this_repo into $dependent"
   diener patch \
-    --crates-to-patch "$this_repo_dir" "$this_repo_diener_arg" \
+    --target "$org_github_prefix/$comp" \
+    --crates-to-patch "$this_repo_dir" \
     --path "Cargo.toml"
   eval "${COMPANION_CHECK_COMMAND:-cargo check --all-targets --workspace}"
 
