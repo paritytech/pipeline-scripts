@@ -37,6 +37,7 @@ this_repo_diener_arg="$3"
 dependent_repo="$4"
 github_api_token="$5"
 update_crates_on_default_branch="$6"
+related_companions="${7:-}"
 
 this_repo_dir="$PWD"
 companions_dir="$this_repo_dir/companions"
@@ -250,9 +251,7 @@ patch_and_check_dependent() {
   # Update the crates to the latest version. This is for example needed if there
   # was a PR to Substrate which only required a Polkadot companion and Cumulus
   # wasn't yet updated to use the latest commit of Polkadot.
-  for update in $update_crates_on_default_branch; do
-    cargo update -p "$update"
-  done
+  cargo update -p $update_crates_on_default_branch
 
   for comp in "${companions[@]}"; do
     local found
