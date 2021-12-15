@@ -301,9 +301,9 @@ main() {
 
   discover_our_crates
 
-  # this function calls itself for each discovered companion throughout each
-  # discovered PR description, effectively making the script consider the
-  # companion references on all PRs
+  # process_pr_description calls itself for each companion in the description on
+  # each detected companion PR, effectively considering all companion references
+  # on all PRs
   process_pr_description "$this_repo" "$CI_COMMIT_REF_NAME"
 
   local dependent_repo_dir="$companions_dir/$dependent_repo"
