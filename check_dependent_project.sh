@@ -265,8 +265,9 @@ process_pr_description() {
 
 patch_and_check_dependent() {
   local dependent="$1"
+  local dependent_repo_dir="$2"
 
-  pushd "$dependent" >/dev/null
+  pushd "$dependent_repo_dir" >/dev/null
 
   match_dependent_crates "$dependent"
 
@@ -315,6 +316,12 @@ main() {
   # companion references on all PRs
   process_pr_description "$this_repo" "$CI_COMMIT_REF_NAME"
 
-  patch_and_check_dependent "$dependent_repo"
+  local dependent_repo_dir="$companions_dir/$dependent_repo"
+  if ! [ -e "$dependent_repo_dir" ]; then
+    dependent_repo_dir="$this_repo_dir/$dependent_repo"
+    git clone --depth=1 "https://github.com/$org/$dependent_repo.git" "$dependent_repo_dir"
+  fi
+
+  patch_and_check_dependent "$dependent_repo" "$dependent_repo_dir"
 }
 main
