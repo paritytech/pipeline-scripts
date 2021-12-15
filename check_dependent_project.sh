@@ -282,9 +282,10 @@ patch_and_check_dependent() {
     local found
     for diener_target in "${diener_patch_targets[@]}"; do
       if [ "$diener_target" = "$comp" ]; then
-        echo "Patching $comp into $dependent"
+        echo "Patching $comp companion into $dependent"
         diener patch \
-          --crates-to-patch "--$diener_target" "$companions_dir/$comp" \
+          "--$diener_target" \
+          --crates-to-patch "$companions_dir/$comp" \
           --path "Cargo.toml"
         found=true
         break
