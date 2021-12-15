@@ -274,7 +274,9 @@ patch_and_check_dependent() {
   # Update the crates to the latest version. This is for example needed if there
   # was a PR to Substrate which only required a Polkadot companion and Cumulus
   # wasn't yet updated to use the latest commit of Polkadot.
-  cargo update -p $update_crates_on_default_branch
+  for update in $update_crates_on_default_branch; do
+    cargo update -p "$update"
+  done
 
   for comp in "${dependent_companions[@]}"; do
     local found
