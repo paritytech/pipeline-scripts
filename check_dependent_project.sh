@@ -212,7 +212,7 @@ process_pr_description_line() {
 
     # clone the companion and use it to patch dependencies in the future
     git clone --depth=1 "https://github.com/$org/$repo.git" "$companions_dir/$repo"
-    pushd "$repo" >/dev/null
+    pushd "$companions_dir/$repo" >/dev/null
     local ref="$(curl \
         -sSL \
         -H "Authorization: token $github_api_token" \
