@@ -68,8 +68,8 @@ discover_our_crates() {
     else
       our_crates+=("$crate")
     fi
-  # dependents with {"source": null} are the ones we own, hence the getpath($p)==null in the jq
-  # script below
+  # dependencies with {"source": null} are the ones in this project's workspace,
+  # hence the getpath($p)==null in the jq script below
   done < <(cargo metadata --quiet --format-version=1 | jq -r '
     . as $in |
     paths |
@@ -158,6 +158,7 @@ match_their_crates() {
 companions=()
 process_pr_description_line() {
   local companion_expr="$1"
+  local source="$2"
 
   # e.g. https://github.com/paritytech/polkadot/pull/123
   # or   polkadot#123
@@ -168,11 +169,10 @@ process_pr_description_line() {
   then
     local repo="${BASH_REMATCH[1]}"
     local pr_number="${BASH_REMATCH[2]}"
-
-    echo "Parsed companion repo=$repo and pr_number=$pr_number from $companion_expr"
+    echo "Parsed companion repo=$repo and pr_number=$pr_number in $companion_expr from $source"
 
     if [ "$this_repo" == "$repo" ]; then
-      echo "Skipping $companion_expr it refers to the repository where this script is currently running"
+      echo "Skipping $companion_expr as it refers to the repository where this script is currently running"
       return
     fi
 
@@ -187,13 +187,14 @@ process_pr_description_line() {
     done
     companions+=("$repo")
 
+    # clone the companion and use it to patch dependencies in the future
     git clone --depth=1 "https://github.com/$org/$repo.git" "$companions_dir/$repo"
     pushd "$repo" >/dev/null
     local ref="$(curl \
         -sSL \
         -H "Authorization: token $github_api_token" \
         "$github_api/repos/$org/$repo/pulls/$pr_number" | \
-      jq -e -r ".head.ref // error(\"$repo#$pr_number is missing head.ref\"))"
+      jq -e -r ".head.ref // error(\"$repo#$pr_number is missing head.ref in the API\"))"
     )"
     git fetch --depth=1 origin "pull/$pr_number/head:$ref"
     git checkout "$ref"
@@ -225,6 +226,8 @@ process_pr_description() {
       "$github_api/repos/$org/$this_repo/pulls/$CI_COMMIT_REF_NAME" | \
     jq -e -r ".body"
   )
+  # in case the PR has no body, jq should have printed "null" which effectively
+  # means lines will always be populated with something
   if [ ! "${lines[@]:-}" ]; then
     die "No lines were read for the description of PR $pr_number (some error probably occurred)"
   fi
@@ -252,7 +255,7 @@ process_pr_description() {
   for line in "${lines[@]}"; do
     if [[ "$line" =~ [cC]ompanion:[[:space:]]*([^[:space:]]+) ]]; then
       echo "Detected companion in the PR description of $repo#$pr_number: ${BASH_REMATCH[1]}"
-      process_pr_description_line "${BASH_REMATCH[1]}"
+      process_pr_description_line "${BASH_REMATCH[1]}" "$repo#$pr_number"
     fi
   done
 }
@@ -264,10 +267,9 @@ patch_and_check_dependent() {
 
   match_their_crates "$dependent"
 
-  # Update the crates to the latest version.
-  #
-  # This is for example needed if there was a pr to Substrate that only required a Polkadot companion
-  # and Cumulus wasn't yet updated to use the latest commit of Polkadot.
+  # Update the crates to the latest version. This is for example needed if there
+  # was a PR to Substrate which only required a Polkadot companion and Cumulus
+  # wasn't yet updated to use the latest commit of Polkadot.
   for update in $update_crates_on_default_branch; do
     cargo update -p "$update"
   done
@@ -289,7 +291,9 @@ patch_and_check_dependent() {
     fi
   done
 
-  diener patch --crates-to-patch "$this_repo_dir" "$this_repo_diener_arg" --path "Cargo.toml"
+  diener patch \
+    --crates-to-patch "$this_repo_dir" "$this_repo_diener_arg" \
+    --path "Cargo.toml"
   eval "${COMPANION_CHECK_COMMAND:-cargo check --all-targets --workspace}"
 
   popd >/dev/null
@@ -303,6 +307,9 @@ main() {
 
   discover_our_crates
 
+  # this function calls itself for each discovered companion throughout each
+  # discovered PR description, effectively making the script consider the
+  # companion references on all PRs
   process_pr_description "$this_repo" "$CI_COMMIT_REF_NAME"
 
   patch_and_check_dependent "$dependent_repo"
