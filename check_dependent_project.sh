@@ -301,19 +301,6 @@ main() {
   git config --global user.email '<>'
   git config --global pull.rebase false
 
-  echo
-  echo "merging master into the pr..."
-  # Merge master into our branch so that the compilation takes into account how the code is going to
-  # perform when the code for this pull request lands on the target branch (à la pre-merge pipelines).
-  # Note that the target branch might not actually be master, but we default to it in the assumption
-  # of the common case. This could be refined in the future.
-  git fetch origin +master:master
-  git fetch origin "+$CI_COMMIT_REF_NAME:$CI_COMMIT_REF_NAME"
-  git checkout "$CI_COMMIT_REF_NAME"
-  git merge master --verbose --no-edit -m "master was merged into the pr by check_dependent_project.sh main()"
-  echo "merging master into the pr: done"
-  echo
-
   discover_our_crates
 
   process_pr_description "$this_repo" "$CI_COMMIT_REF_NAME"
