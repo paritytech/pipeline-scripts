@@ -246,12 +246,12 @@ process_pr_description() {
   done < <(curl \
       -sSL \
       -H "Authorization: token $github_api_token" \
-      "$github_api/repos/$org/$this_repo/pulls/$CI_COMMIT_REF_NAME" | \
+      "$github_api/repos/$org/$repo/pulls/$pr_number" | \
     jq -e -r ".body"
   )
   # in case the PR has no body, jq should have printed "null" which effectively
   # means lines will always be populated with something
-  if [ ! "${lines[@]:-}" ]; then
+  if ! [ "${lines[@]}" ]; then
     die "No lines were read for the description of PR $pr_number (some error probably occurred)"
   fi
 
