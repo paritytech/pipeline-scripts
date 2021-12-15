@@ -217,7 +217,7 @@ process_pr_description_line() {
         -sSL \
         -H "Authorization: token $github_api_token" \
         "$github_api/repos/$org/$repo/pulls/$pr_number" | \
-      jq -e -r ".head.ref // error(\"$repo#$pr_number is missing head.ref in the API\"))"
+      jq -e -r ".head.ref"
     )"
     git fetch --depth=1 origin "pull/$pr_number/head:$ref"
     git checkout "$ref"
