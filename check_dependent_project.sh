@@ -53,10 +53,10 @@ discover_our_crates() {
   # https://unix.stackexchange.com/questions/541969/nested-command-substitution-does-not-stop-a-script-on-a-failure-even-if-e-and-s
   local last_line
 
-  local found
   while IFS= read -r crate; do
     last_line="$crate"
     # for avoiding duplicate entries
+    local found
     for our_crate in "${our_crates[@]}"; do
       if [ "$crate" == "$our_crate" ]; then
         found=true
@@ -85,7 +85,6 @@ discover_our_crates() {
 match_their_crates() {
   local target_name="$1"
   local crates_not_found=()
-  local found
 
   # workaround for early exits not being detected in command substitution
   # https://unix.stackexchange.com/questions/541969/nested-command-substitution-does-not-stop-a-script-on-a-failure-even-if-e-and-s
@@ -107,6 +106,7 @@ match_their_crates() {
       source)
         next="crate"
         if [ "$line" == "$our_crates_source" ] || [[ "$line" == "$our_crates_source?"* ]]; then
+          local found
           for our_crate in "${our_crates[@]}"; do
             if [ "$our_crate" == "$crate" ]; then
               found=true
@@ -203,7 +203,7 @@ process_pr_description_line() {
     # collect also the companions of companions
     process_pr_description "$repo" "$pr_number"
   else
-    die "Companion PR description had invalid format or did not belong to organization $org: $companion_expr"
+    die "Companion in the PR description of $source had invalid format or did not belong to organization $org: $companion_expr"
   fi
 }
 
@@ -259,7 +259,9 @@ patch_and_check_dependent() {
     for diener_target in "${diener_patch_targets[@]}"; do
       if [ "$diener_target" = "$comp" ]; then
         echo "Patching $comp into $dependent"
-        diener patch --crates-to-patch "--$diener_target" "$companions_dir/$comp" --path "Cargo.toml"
+        diener patch \
+          --crates-to-patch "--$diener_target" "$companions_dir/$comp" \
+          --path "Cargo.toml"
         found=true
         break
       fi
@@ -267,7 +269,7 @@ patch_and_check_dependent() {
     if [ "${found:-}" ]; then
       unset found
     else
-      echo "NOTE: Companion $comp was specified but not patched through diener. Perhaps diener does not support it."
+      echo "NOTE: Companion $comp was specified but not patched through diener. Either diener does not support it or this script failed to detect its support."
     fi
   done
 
