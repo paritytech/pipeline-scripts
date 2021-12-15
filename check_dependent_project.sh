@@ -31,10 +31,6 @@ die() {
   exit 1
 }
 
-# valid for 69ab0f76fb851968af8e493061cca84a2f3b1c5b
-# FIXME: extract this information from the diener CLI when that is supported
-diener_patch_targets=(substrate polkadot cumulus)
-
 org="$1"
 this_repo="$2"
 this_repo_diener_arg="$3"
@@ -45,7 +41,8 @@ update_crates_on_default_branch="$6"
 this_repo_dir="$PWD"
 companions_dir="$this_repo_dir/companions"
 github_api="https://api.github.com"
-org_crates_prefix="git+https://github.com/$org"
+org_github_prefix="https://github.com/$org"
+org_crates_prefix="git+$org_github_prefix"
 
 our_crates=()
 our_crates_source="$org_crates_prefix/$this_repo"
@@ -279,23 +276,11 @@ patch_and_check_dependent() {
   done
 
   for comp in "${dependent_companions[@]}"; do
-    local found
-    for diener_target in "${diener_patch_targets[@]}"; do
-      if [ "$diener_target" = "$comp" ]; then
-        echo "Patching $comp companion into $dependent"
-        diener patch \
-          "--$diener_target" \
-          --crates-to-patch "$companions_dir/$comp" \
-          --path "Cargo.toml"
-        found=true
-        break
-      fi
-    done
-    if [ "${found:-}" ]; then
-      unset found
-    else
-      echo "NOTE: Companion $comp was specified but not patched through diener. Either diener does not support it or this script failed to detect its support."
-    fi
+    echo "Patching $comp companion into $dependent"
+    diener patch \
+      --target "$org_github_prefix/$comp" \
+      --crates-to-patch "$companions_dir/$comp" \
+      --path "Cargo.toml"
   done
 
   diener patch \
