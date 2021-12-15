@@ -170,7 +170,7 @@ match_dependent_crates() {
   if [ "$crates_not_found" ]; then
     echo -e "Errors during crate matching\n"
     printf "Failed to detect our crate \"%s\" referenced in $target_name\n" "${crates_not_found[@]}"
-    echo -e "\nNote: this error generally happens if you have deleted or renamed a crate and did not update it in $target_name. Consider opening a companion pull request on $target_name and referencing it in this pull request's description like:\n$target_name companion: [your companion PR here]"
+    echo -e "\nNote: this error generally happens if you have deleted or renamed a crate and did not update it in $target_name. Consider opening a companion pull request on $target_name and referencing it in this PR's description like:\n$target_name companion: [your companion PR here]"
     die "Check failed"
   fi
 }
@@ -235,7 +235,7 @@ process_pr_description() {
     return
   fi
 
-  echo "processing pull request $repo#$pr_number"
+  echo "Processing PR $repo#$pr_number"
 
   local lines=()
   while IFS= read -r line; do
