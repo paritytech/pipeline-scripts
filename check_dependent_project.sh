@@ -167,7 +167,7 @@ match_dependent_crates() {
     die "No lines were read for cargo metadata of $PWD (some error probably occurred)"
   fi
 
-  if [ "${crates_not_found[@]}" ]; then
+  if [ "$crates_not_found" ]; then
     echo -e "Errors during crate matching\n"
     printf "Failed to detect our crate \"%s\" referenced in $target_name\n" "${crates_not_found[@]}"
     echo -e "\nNote: this error generally happens if you have deleted or renamed a crate and did not update it in $target_name. Consider opening a companion pull request on $target_name and referencing it in this pull request's description like:\n$target_name companion: [your companion PR here]"
