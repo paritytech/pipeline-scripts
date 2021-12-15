@@ -232,26 +232,6 @@ process_pr_description() {
     die "No lines were read for the description of PR $pr_number (some error probably occurred)"
   fi
 
-  # first check if the companion is disabled *somewhere* in the PR description
-  # before doing any work
-  for line in "${lines[@]}"; do
-    if
-      [[ "$line" =~ skip[^[:alnum:]]+([^[:space:]]+) ]] &&
-      [[ "$repo" == "$dependent_repo" ]] &&
-      [[
-        "${BASH_REMATCH[1]}" = "$CI_JOB_NAME" ||
-        "${BASH_REMATCH[1]}" = "continuous-integration/gitlab-$CI_JOB_NAME"
-      ]]
-    then
-      # FIXME: This escape hatch should be removed at some point when the
-      # companion build system is able to deal with all edge cases, such as
-      # the one described in
-      # https://github.com/paritytech/pipeline-scripts/issues/3#issuecomment-947539791
-      echo "Skipping $CI_JOB_NAME as specified in the PR description"
-      exit
-    fi
-  done
-
   for line in "${lines[@]}"; do
     if [[ "$line" =~ [cC]ompanion:[[:space:]]*([^[:space:]]+) ]]; then
       echo "Detected companion in the PR description of $repo#$pr_number: ${BASH_REMATCH[1]}"
