@@ -31,21 +31,36 @@ die() {
   exit 1
 }
 
+# valid for 69ab0f76fb851968af8e493061cca84a2f3b1c5b
+# FIXME: extract this information from the diener CLI when that is supported
+diener_patch_targets=(substrate polkadot cumulus)
+
 org="$1"
 this_repo="$2"
 this_repo_diener_arg="$3"
 dependent_repo="$4"
 github_api_token="$5"
 update_crates_on_default_branch="$6"
-related_companions="${7:-}"
+related_companions="$7"
+
+for comp in $related_companions; do
+  for patch_target in "${diener_patch_targets[@]}"; do
+    if [ "$comp" == "$patch_target" ]; then
+      found=true
+      break
+    fi
+  done
+  if [ "${found:-}" ]; then
+    unset found
+  else
+    die "Companion $comp is not a valid patch target"
+  fi
+done
 
 this_repo_dir="$PWD"
 companions_dir="$this_repo_dir/companions"
 github_api="https://api.github.com"
 
-# valid for 69ab0f76fb851968af8e493061cca84a2f3b1c5b
-# FIXME: extract this information from the diener CLI when that is supported
-diener_patch_targets=(substrate polkadot cumulus)
 
 our_crates=()
 our_crates_source="git+https://github.com/$org/$this_repo"
@@ -255,6 +270,20 @@ patch_and_check_dependent() {
 
   for comp in "${companions[@]}"; do
     local found
+
+    for related_comp in $related_companions; do
+      if [ "$related_comp" == "$comp" ]; then
+        found=true
+        break
+      fi
+    done
+
+    if [ ! "${found:-}" ]; then
+      echo "NOTE: Companion $comp was detected but skipped as it is not registered in the related companions (${related_companions:-none})"
+      continue
+    fi
+    unset found
+
     for diener_target in "${diener_patch_targets[@]}"; do
       if [ "$diener_target" = "$comp" ]; then
         echo "Patching $comp into $dependent"
