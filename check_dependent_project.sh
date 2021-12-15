@@ -41,29 +41,14 @@ this_repo_diener_arg="$3"
 dependent_repo="$4"
 github_api_token="$5"
 update_crates_on_default_branch="$6"
-related_companions="$7"
-
-for comp in $related_companions; do
-  for patch_target in "${diener_patch_targets[@]}"; do
-    if [ "$comp" == "$patch_target" ]; then
-      found=true
-      break
-    fi
-  done
-  if [ "${found:-}" ]; then
-    unset found
-  else
-    die "Companion $comp is not a valid patch target"
-  fi
-done
 
 this_repo_dir="$PWD"
 companions_dir="$this_repo_dir/companions"
 github_api="https://api.github.com"
-
+org_crates_prefix="git+https://github.com/$org"
 
 our_crates=()
-our_crates_source="git+https://github.com/$org/$this_repo"
+our_crates_source="$org_crates_prefix/$this_repo"
 discover_our_crates() {
   # workaround for early exits not being detected in command substitution
   # https://unix.stackexchange.com/questions/541969/nested-command-substitution-does-not-stop-a-script-on-a-failure-even-if-e-and-s
@@ -98,9 +83,11 @@ discover_our_crates() {
   fi
 }
 
-match_their_crates() {
+dependent_companions=()
+match_dependent_crates() {
   local target_name="$1"
   local crates_not_found=()
+  dependent_companions=()
 
   # workaround for early exits not being detected in command substitution
   # https://unix.stackexchange.com/questions/541969/nested-command-substitution-does-not-stop-a-script-on-a-failure-even-if-e-and-s
@@ -121,6 +108,26 @@ match_their_crates() {
       ;;
       source)
         next="crate"
+
+        for comp in "${companions[@]}"; do
+          local companion_crate_source="$org_crates_prefix/$comp"
+          if [ "$line" == "$companion_crate_source" ] || [[ "$line" == "$companion_crate_source?"* ]]; then
+            # prevent duplicates in dependent_companions
+            local found
+            for dep_comp in "${dependent_companions[@]}"; do
+              if [ "$dep_comp" == "$comp" ]; then
+                found=true
+                break
+              fi
+            done
+            if [ "${found:-}" ]; then
+              unset found
+            else
+              dependent_companions+=("$comp")
+            fi
+          fi
+        done
+
         if [ "$line" == "$our_crates_source" ] || [[ "$line" == "$our_crates_source?"* ]]; then
           local found
           for our_crate in "${our_crates[@]}"; do
@@ -261,29 +268,15 @@ patch_and_check_dependent() {
 
   pushd "$dependent" >/dev/null
 
-  match_their_crates "$dependent"
+  match_dependent_crates "$dependent"
 
   # Update the crates to the latest version. This is for example needed if there
   # was a PR to Substrate which only required a Polkadot companion and Cumulus
   # wasn't yet updated to use the latest commit of Polkadot.
   cargo update -p $update_crates_on_default_branch
 
-  for comp in "${companions[@]}"; do
+  for comp in "${dependent_companions[@]}"; do
     local found
-
-    for related_comp in $related_companions; do
-      if [ "$related_comp" == "$comp" ]; then
-        found=true
-        break
-      fi
-    done
-
-    if [ ! "${found:-}" ]; then
-      echo "NOTE: Companion $comp was detected but skipped as it is not registered in the related companions (${related_companions:-none})"
-      continue
-    fi
-    unset found
-
     for diener_target in "${diener_patch_targets[@]}"; do
       if [ "$diener_target" = "$comp" ]; then
         echo "Patching $comp into $dependent"
