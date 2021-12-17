@@ -18,8 +18,6 @@ check_dependent_project
 
 This check ensures that this project's dependents do not suffer downstream breakages from new code
 changes.
-
-PIPELINE_SCRIPTS_TAG: $PIPELINE_SCRIPTS_TAG
 "
 
 set -eu -o pipefail
