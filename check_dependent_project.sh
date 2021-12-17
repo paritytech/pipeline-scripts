@@ -208,17 +208,47 @@ process_pr_description_line() {
     done
     companions+=("$repo")
 
-    # clone the companion and use it to patch dependencies in the future
-    git clone --depth=1 "https://github.com/$org/$repo.git" "$companions_dir/$repo"
+    # Heuristic: assume the companion PR has a common merge ancestor with master
+    # in its last N commits.
+    local merge_ancestor_max_depth=100
+
+    # Clone the default branch of this companion's target repository (assumed to
+    # be named "master")
+    git clone \
+      --depth=$merge_ancestor_max_depth \
+      "https://github.com/$org/$repo.git" \
+      "$companions_dir/$repo"
     pushd "$companions_dir/$repo" >/dev/null
+
+    # Clone the companion's branch
     local ref="$(curl \
         -sSL \
         -H "Authorization: token $github_api_token" \
         "$github_api/repos/$org/$repo/pulls/$pr_number" | \
       jq -e -r ".head.ref"
     )"
-    git fetch --depth=1 origin "pull/$pr_number/head:$ref"
+    git fetch --depth=$merge_ancestor_max_depth origin "pull/$pr_number/head:$ref"
     git checkout "$ref"
+
+echo "
+Attempting to merge $repo#$pr_number with master after fetching its last $merge_ancestor_max_depth commits.
+
+If this step fails, either:
+
+- $repo#$pr_number has conflicts with master
+
+*OR*
+
+- A common merge ancestor could not be found between master and the last $merge_ancestor_max_depth commits of $repo#$pr_number.
+
+Both cases can be solved by merging master into $repo#$pr_number.
+"
+    git show-ref origin/master
+    git merge origin/master \
+      --verbose \
+      --no-edit \
+      -m "Merge master of $repo into companion $repo#$pr_number"
+
     popd >/dev/null
 
     # collect also the companions of companions
@@ -301,6 +331,20 @@ main() {
   git config --global user.email '<>'
   git config --global pull.rebase false
 
+  # Merge master into this branch so that we have a better expectation of the
+  # integration still working after this PR lands.
+  # Since master is being merged here, at the start the dependency chain, we'll
+  # have to do the same on all discovered companions since they also might have
+  # accompanying changes for the code being brought in.
+  local branch="$(git symbolic-ref --short HEAD)"
+  git fetch --force origin master
+  git show-ref origin/master
+  echo "Merge master into $branch"
+  git merge origin/master \
+    --verbose \
+    --no-edit \
+    -m "Merge master into $branch"
+
   discover_our_crates
 
   # process_pr_description calls itself for each companion in the description on
@@ -310,6 +354,7 @@ main() {
 
   local dependent_repo_dir="$companions_dir/$dependent_repo"
   if ! [ -e "$dependent_repo_dir" ]; then
+    echo "Cloning $dependent_repo directly as it was not detected as a companion"
     dependent_repo_dir="$this_repo_dir/$dependent_repo"
     git clone --depth=1 "https://github.com/$org/$dependent_repo.git" "$dependent_repo_dir"
   fi
