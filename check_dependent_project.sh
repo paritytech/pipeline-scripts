@@ -237,7 +237,7 @@ If this step fails, either:
 
 - $repo#$pr_number has conflicts with master
 
-*OR*
+OR
 
 - A common merge ancestor could not be found between master and the last $merge_ancestor_max_depth commits of $repo#$pr_number.
 
@@ -333,17 +333,16 @@ main() {
 
   # Merge master into this branch so that we have a better expectation of the
   # integration still working after this PR lands.
-  # Since master is being merged here, at the start the dependency chain, we'll
-  # have to do the same on all discovered companions since they also might have
+  # Since master's HEAD is being merged here, at the start the dependency chain,
+  # the same has to be done for all the companions because they might have
   # accompanying changes for the code being brought in.
-  local branch="$(git symbolic-ref --short HEAD)"
   git fetch --force origin master
   git show-ref origin/master
-  echo "Merge master into $branch"
+  echo "Merge master into $CI_COMMIT_REF_NAME"
   git merge origin/master \
     --verbose \
     --no-edit \
-    -m "Merge master into $branch"
+    -m "Merge master into $CI_COMMIT_REF_NAME"
 
   discover_our_crates
 
