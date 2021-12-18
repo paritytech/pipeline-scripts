@@ -204,7 +204,6 @@ process_pr_description_line() {
         return
       fi
     done
-    companions+=("$repo")
 
     local state closed mergeable ref sha
     read -d '\n' -r state closed mergeable ref sha < <(curl \
@@ -230,6 +229,8 @@ process_pr_description_line() {
     if [ "$mergeable" != "true" ]; then
       die "Github API says $repo#$pr_number is not mergeable"
     fi
+
+    companions+=("$repo")
 
     # Heuristic: assume the companion PR has a common merge ancestor with master
     # in its last N commits.
