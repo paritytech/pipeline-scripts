@@ -319,14 +319,14 @@ patch_and_check_dependent() {
 
   pushd "$dependent_repo_dir" >/dev/null
 
-  match_dependent_crates "$dependent"
-
   # Update the crates to the latest version. This is for example needed if there
   # was a PR to Substrate which only required a Polkadot companion and Cumulus
   # wasn't yet updated to use the latest commit of Polkadot.
   for update in $update_crates_on_default_branch; do
     cargo update -p "$update"
   done
+
+  match_dependent_crates "$dependent"
 
   for comp in "${dependent_companions[@]}"; do
     echo "Patching $comp companion into $dependent"
