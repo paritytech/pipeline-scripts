@@ -243,13 +243,11 @@ process_pr_description_line() {
       "$companions_dir/$repo"
     pushd "$companions_dir/$repo" >/dev/null
 
+    # Show what branches we got after cloning the repository
+    git show-ref
+
     # Clone the companion's branch
-    local ref="$(curl \
-        -sSL \
-        -H "Authorization: token $github_api_token" \
-        "$github_api/repos/$org/$repo/pulls/$pr_number" | \
-      jq -e -r ".head.ref"
-    )"
+    echo "Cloning the companion $repo#$pr_number (branch $ref, SHA $sha)"
     git fetch --depth=$merge_ancestor_max_depth origin "pull/$pr_number/head:$ref"
     git checkout "$ref"
 
