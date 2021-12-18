@@ -206,6 +206,31 @@ process_pr_description_line() {
     done
     companions+=("$repo")
 
+    local state closed mergeable ref sha
+    read -d '\n' -r state closed mergeable ref sha < <(curl \
+        -sSL \
+        -H "Authorization: token $github_api_token" \
+        "$github_api/repos/$org/$repo/pulls/$pr_number" | \
+      jq -e -r "[
+        .state,
+        .closed,
+        .mergeable,
+        .head.ref,
+        .head.sha
+      ] | .[]"
+    # https://stackoverflow.com/questions/40547032/bash-read-returns-with-exit-code-1-even-though-it-runs-as-expected
+    # ignore the faulty exit code since read still is regardless still reading the values we want
+    ) || :
+
+    if [[ "$state" == "closed" || "$closed" == "true" ]]; then
+      echo "Skipping $repo#$pr_number because it is closed"
+      return
+    fi
+
+    if [ "$mergeable" != "true" ]; then
+      die "Github API says $repo#$pr_number is not mergeable"
+    fi
+
     # Heuristic: assume the companion PR has a common merge ancestor with master
     # in its last N commits.
     local merge_ancestor_max_depth=100
