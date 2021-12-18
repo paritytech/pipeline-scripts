@@ -359,11 +359,11 @@ main() {
   # accompanying changes for the code being brought in.
   git fetch --force origin master
   git show-ref origin/master
-  echo "Merge master into $CI_COMMIT_REF_NAME"
+  echo "Merge master into $this_repo#$CI_COMMIT_REF_NAME"
   git merge origin/master \
     --verbose \
     --no-edit \
-    -m "Merge master into $CI_COMMIT_REF_NAME"
+    -m "Merge master into $this_repo#$CI_COMMIT_REF_NAME"
 
   discover_our_crates
 
