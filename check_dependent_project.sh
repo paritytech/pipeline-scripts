@@ -329,6 +329,12 @@ patch_and_check_dependent() {
   match_dependent_crates "$dependent"
 
   for comp in "${dependent_companions[@]}"; do
+    echo "Patching $this_repo into a companion dependency of a companion (assumes $comp is a dependency of $dependent)"
+    diener patch \
+      --target "$org_github_prefix/$this_repo" \
+      --crates-to-patch "$this_repo_dir" \
+      --path "$companions_dir/$comp/Cargo.toml"
+
     echo "Patching $comp companion into $dependent"
     diener patch \
       --target "$org_github_prefix/$comp" \
