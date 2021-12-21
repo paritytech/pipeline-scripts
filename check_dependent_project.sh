@@ -329,7 +329,7 @@ patch_and_check_dependent() {
   match_dependent_crates "$dependent"
 
   for comp in "${dependent_companions[@]}"; do
-    echo "Patching $this_repo into a companion dependency of a companion (assumes $comp is a dependency of $dependent)"
+    echo "Patching $this_repo into the $comp companion, which is a dependency of $dependent_repo, assuming $comp also depends on $this_repo. Reasoning: if a companion was referenced in this PR or a companion of this PR, then it probably has a dependency on this PR, since PR descriptions are processed starting from the dependencies."
     diener patch \
       --target "$org_github_prefix/$this_repo" \
       --crates-to-patch "$this_repo_dir" \
