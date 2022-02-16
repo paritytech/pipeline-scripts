@@ -313,6 +313,16 @@ process_pr_description() {
   done
 }
 
+update_crates() {
+  local args=()
+
+  for crate in "$@"; do
+    args+=("-p" "$crate")
+  done
+
+  cargo update "${args[@]}"
+}
+
 patch_and_check_dependent() {
   local dependent="$1"
   local dependent_repo_dir="$2"
@@ -322,9 +332,7 @@ patch_and_check_dependent() {
   # Update the crates to the latest version. This is for example needed if there
   # was a PR to Substrate which only required a Polkadot companion and Cumulus
   # wasn't yet updated to use the latest commit of Polkadot.
-  for update in $update_crates_on_default_branch; do
-    cargo update -p "$update"
-  done
+  update_crates $update_crates_on_default_branch
 
   match_dependent_crates "$dependent"
 
