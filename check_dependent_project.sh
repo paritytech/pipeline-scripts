@@ -333,11 +333,6 @@ patch_and_check_dependent() {
 
   pushd "$dependent_repo_dir" >/dev/null
 
-  # The crates are matched *BEFORE* patching so that we can detect lingering
-  # dependencies which would be removed in this pull request but might not
-  # have been pruned properly from the companion
-  match_dependent_crates "$dependent"
-
   for comp in "${dependent_companions[@]}"; do
     echo "Patching $this_repo into the $comp companion, which is a dependency of $dependent_repo, assuming $comp also depends on $this_repo. Reasoning: if a companion was referenced in this PR or a companion of this PR, then it probably has a dependency on this PR, since PR descriptions are processed starting from the dependencies."
     diener patch \
@@ -357,6 +352,11 @@ patch_and_check_dependent() {
     --target "$org_github_prefix/$this_repo" \
     --crates-to-patch "$this_repo_dir" \
     --path "Cargo.toml"
+
+  # The crates are matched *AFTER* patching so that we verify that dependencies
+  # which are removed in this pull request  have been pruned properly from the
+  # companion
+  match_dependent_crates "$dependent"
 
   # Update the crates to the latest version. This is for example needed if there
   # was a PR to Substrate which only required a Polkadot companion and Cumulus
