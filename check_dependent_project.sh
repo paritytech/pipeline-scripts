@@ -314,6 +314,10 @@ process_pr_description() {
 }
 
 update_crates() {
+  if [ $? -eq 0 ]; then
+    return
+  fi
+
   local args=()
 
   for crate in "$@"; do
@@ -329,11 +333,9 @@ patch_and_check_dependent() {
 
   pushd "$dependent_repo_dir" >/dev/null
 
-  # Update the crates to the latest version. This is for example needed if there
-  # was a PR to Substrate which only required a Polkadot companion and Cumulus
-  # wasn't yet updated to use the latest commit of Polkadot.
-  update_crates $update_crates_on_default_branch
-
+  # The crates are matched *BEFORE* patching so that we can detect lingering
+  # dependencies which would be removed in this pull request but might not
+  # have been pruned properly from the companion
   match_dependent_crates "$dependent"
 
   for comp in "${dependent_companions[@]}"; do
@@ -355,6 +357,13 @@ patch_and_check_dependent() {
     --target "$org_github_prefix/$this_repo" \
     --crates-to-patch "$this_repo_dir" \
     --path "Cargo.toml"
+
+  # Update the crates to the latest version. This is for example needed if there
+  # was a PR to Substrate which only required a Polkadot companion and Cumulus
+  # wasn't yet updated to use the latest commit of Polkadot.
+  # This should be done only *AFTER* patching so that "cargo update" will be
+  # able to find new crates introduced in the current pull request.
+  update_crates $update_crates_on_default_branch
 
   eval "${COMPANION_CHECK_COMMAND:-cargo check --all-targets --workspace}"
 
