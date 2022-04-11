@@ -44,7 +44,6 @@ org_github_prefix="https://github.com/$org"
 org_crates_prefix="git+$org_github_prefix"
 
 our_crates=()
-our_crates_source="$org_crates_prefix/$this_repo"
 discover_our_crates() {
   # workaround for early exits not being detected in command substitution
   # https://unix.stackexchange.com/questions/541969/nested-command-substitution-does-not-stop-a-script-on-a-failure-even-if-e-and-s
@@ -79,11 +78,11 @@ discover_our_crates() {
   fi
 }
 
-dependent_companions=()
 match_dependent_crates() {
   local target_name="$1"
   local crates_not_found=()
-  dependent_companions=()
+
+  local our_crates_source="$org_crates_prefix/$this_repo"
 
   # workaround for early exits not being detected in command substitution
   # https://unix.stackexchange.com/questions/541969/nested-command-substitution-does-not-stop-a-script-on-a-failure-even-if-e-and-s
@@ -105,26 +104,7 @@ match_dependent_crates() {
       source)
         next="crate"
 
-        for comp in "${companions[@]}"; do
-          local companion_crate_source="$org_crates_prefix/$comp"
-          if [ "$line" == "$companion_crate_source" ] || [[ "$line" == "$companion_crate_source?"* ]]; then
-            # prevent duplicates in dependent_companions
-            local found
-            for dep_comp in "${dependent_companions[@]}"; do
-              if [ "$dep_comp" == "$comp" ]; then
-                found=true
-                break
-              fi
-            done
-            if [ "${found:-}" ]; then
-              unset found
-            else
-              dependent_companions+=("$comp")
-            fi
-          fi
-        done
-
-        if [ "$line" == "$our_crates_source" ] || [[ "$line" == "$our_crates_source?"* ]]; then
+        if [ "${line:0:${#our_crates_source}}" == "$our_crates_source" ]; then
           local found
           for our_crate in "${our_crates[@]}"; do
             if [ "$our_crate" == "$crate" ]; then
@@ -168,9 +148,68 @@ match_dependent_crates() {
 
   if [ "${crates_not_found[@]}" ]; then
     echo -e "Errors during crate matching\n"
-    printf "Failed to detect our crate \"%s\" referenced in $target_name\n" "${crates_not_found[@]}"
-    echo -e "\nNote: this error generally happens if you have deleted or renamed a crate and did not update it in $target_name. Consider opening a companion pull request on $target_name and referencing it in this PR's description like:\n$target_name companion: [your companion PR here]"
+    printf "Failed to detect our crates \"%s\" referenced in $target_name\n" "${crates_not_found[@]}"
+    echo -e "\nNote: this error generally happens if you have deleted or renamed a crate and did not update it in $target_name. Consider opening a companion pull request on $target_name and referencing it in this PR's description like:\n$target_name companion: [companion PR link]"
     die "Check failed"
+  fi
+}
+
+detect_dependencies_among_companions() {
+  dependencies_among_companions=()
+
+  # workaround for early exits not being detected in command substitution
+  # https://unix.stackexchange.com/questions/541969/nested-command-substitution-does-not-stop-a-script-on-a-failure-even-if-e-and-s
+  local last_line
+
+  # output will be consumed in the format:
+  #   crate
+  #   source
+  #   crate
+  #   ...
+  local next="crate"
+  while IFS= read -r line; do
+    last_line="$line"
+    case "$next" in
+      crate)
+        next="source"
+        crate="$line"
+      ;;
+      source)
+        next="crate"
+
+        for comp in "${companions[@]}"; do
+          local companion_crate_source="$org_crates_prefix/$comp"
+          if [ "${line:0:${#companion_crate_source}}" == "$companion_crate_source" ]; then
+            # prevent duplicates in dependencies_among_companions
+            local found
+            for dep_comp in "${dependencies_among_companions[@]}"; do
+              if [ "$dep_comp" == "$comp" ]; then
+                found=true
+                break
+              fi
+            done
+            if [ "${found:-}" ]; then
+              unset found
+            else
+              dependencies_among_companions+=("$comp")
+            fi
+          fi
+        done
+      ;;
+      *)
+        die "ERROR: Unknown state $next"
+      ;;
+    esac
+  done < <(cargo metadata --quiet --format-version=1 | jq -r '
+    . as $in |
+    paths(select(type=="string")) |
+    select(.[-1]=="source") as $source_path |
+    del($source_path[-1]) as $path |
+    [$in | getpath($path + ["name"]), getpath($path + ["source"])] |
+    .[]
+  ')
+  if [ -z "${last_line+_}" ]; then
+    die "No lines were read for cargo metadata of $PWD (some error probably occurred)"
   fi
 }
 
@@ -333,8 +372,24 @@ patch_and_check_dependent() {
 
   pushd "$dependent_repo_dir" >/dev/null
 
-  for comp in "${dependent_companions[@]}"; do
-    echo "Patching $this_repo into the $comp companion, which is a dependency of $dependent_repo, assuming $comp also depends on $this_repo. Reasoning: if a companion was referenced in this PR or a companion of this PR, then it probably has a dependency on this PR, since PR descriptions are processed starting from the dependencies."
+  # Patch this repository (the dependency) into the dependent for the sake of
+  # being able to test how the dependency graph will behave after the merge
+  echo "Patching $this_repo into $dependent"
+  diener patch \
+    --target "$org_github_prefix/$this_repo" \
+    --crates-to-patch "$this_repo_dir" \
+    --path Cargo.toml
+
+  # Detect the companions which are a dependency of dependent; e.g. when we're
+  # running this script in Substrate and the dependent for this job is Cumulus,
+  # a Polkadot companion is a dependency of the dependent since Cumulus depends
+  # on Polkadot
+  detect_dependencies_among_companions
+
+  # Each companion dependency is also patched into the dependent so that the
+  # dependency graph becomes how it should end up after all PRs are merged
+  for comp in "${dependencies_among_companions[@]}"; do
+    echo "Patching $this_repo into the $comp companion, which is a dependency of $dependent, assuming $comp also depends on $this_repo. Reasoning: if a companion was referenced in this PR or a companion of this PR, then it probably has a dependency on this PR, since PR descriptions are processed starting from the dependencies."
     diener patch \
       --target "$org_github_prefix/$this_repo" \
       --crates-to-patch "$this_repo_dir" \
@@ -344,18 +399,13 @@ patch_and_check_dependent() {
     diener patch \
       --target "$org_github_prefix/$comp" \
       --crates-to-patch "$companions_dir/$comp" \
-      --path "Cargo.toml"
+      --path Cargo.toml
   done
 
-  echo "Patching $this_repo into $dependent"
-  diener patch \
-    --target "$org_github_prefix/$this_repo" \
-    --crates-to-patch "$this_repo_dir" \
-    --path "Cargo.toml"
-
-  # The crates are matched *AFTER* patching so that we verify that dependencies
-  # which are removed in this pull request  have been pruned properly from the
-  # companion
+  # Match the crates *AFTER* patching for verifying that dependencies which are
+  # removed in this pull request have been pruned properly from the dependent.
+  # It does not make sense to do this before patching since the dependency graph
+  # would not yet how be how it should become after all merges are finished.
   match_dependent_crates "$dependent"
 
   # Update the crates to the latest version. This is for example needed if there
