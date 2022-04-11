@@ -314,7 +314,7 @@ process_pr_description() {
 }
 
 update_crates() {
-  if [ $? -eq 0 ]; then
+  if [ $# -eq 0 ]; then
     return
   fi
 
