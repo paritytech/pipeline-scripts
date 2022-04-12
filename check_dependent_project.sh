@@ -104,7 +104,12 @@ match_dependent_crates() {
       source)
         next="crate"
 
-        if [ "${line:0:${#our_crates_source}}" == "$our_crates_source" ]; then
+        if [[
+          # git+https://github.com/$org/$repo
+          "$line" == "$our_crates_source" ||
+          # git+https://github.com/$org/$repo?branch=master
+          "${line:0:$(( ${#our_crates_source} + 1 ))}" == "${our_crates_source}?"
+        ]]; then
           local found
           for our_crate in "${our_crates[@]}"; do
             if [ "$our_crate" == "$crate" ]; then
@@ -179,7 +184,12 @@ detect_dependencies_among_companions() {
 
         for comp in "${companions[@]}"; do
           local companion_crate_source="$org_crates_prefix/$comp"
-          if [ "${line:0:${#companion_crate_source}}" == "$companion_crate_source" ]; then
+          if [[
+            # git+https://github.com/$org/$repo
+            "$line" == "$companion_crate_source" ||
+            # git+https://github.com/$org/$repo?branch=master
+            "${line:0:$(( ${#companion_crate_source} + 1 ))}" == "${companion_crate_source}?"
+          ]]; then
             # prevent duplicates in dependencies_among_companions
             local found
             for dep_comp in "${dependencies_among_companions[@]}"; do
