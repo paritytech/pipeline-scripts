@@ -36,9 +36,11 @@ this_repo_diener_arg="$3"
 dependent_repo="$4"
 github_api_token="$5"
 update_crates_on_default_branch="$6"
+extra_dependencies="${7:-}"
 
 this_repo_dir="$PWD"
 companions_dir="$this_repo_dir/companions"
+extra_dependencies_dir="$this_repo_dir/extra_dependencies"
 github_api="https://api.github.com"
 org_github_prefix="https://github.com/$org"
 org_crates_prefix="git+$org_github_prefix"
@@ -381,6 +383,31 @@ patch_and_check_dependent() {
   local dependent_repo_dir="$2"
 
   pushd "$dependent_repo_dir" >/dev/null
+
+  # It is necessary to patch in extra dependencies which have already been
+  # merged in previous steps of the Companion Build System's dependency chain.
+  # For instance, when Cumulus is the dependent on Polkadot's pipeline, it is
+  # necessary to patch the master of Substrate into it since master will contain
+  # the pull request which was part of the dependency chain for this PR and was
+  # merged before it.
+  for extra_dependency in $extra_dependencies; do
+    git clone \
+      --depth=1 \
+      "https://github.com/$org/$extra_dependency.git" \
+      "$extra_dependencies_dir/$extra_dependency"
+
+    echo "Patching extra dependency $extra_dependency into $this_repo_dir"
+    diener patch \
+      --target "$org_github_prefix/$extra_dependency" \
+      --crates-to-patch "$extra_dependencies_dir/$extra_dependency" \
+      --path "$this_repo_dir/Cargo.toml"
+
+    echo "Patching extra dependency $extra_dependency into $dependent"
+    diener patch \
+      --target "$org_github_prefix/$extra_dependency" \
+      --crates-to-patch "$extra_dependencies_dir/$extra_dependency" \
+      --path Cargo.toml
+  done
 
   # Patch this repository (the dependency) into the dependent for the sake of
   # being able to test how the dependency graph will behave after the merge
