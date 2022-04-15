@@ -381,7 +381,7 @@ patch_and_check_dependent() {
   # this script gets to run for the last time (after lockfile updates and before
   # merge).
   for extra_dependency in $extra_dependencies; do
-    echo "Cloning extra dependency $extra_dependency to patch its default branch into $this_repo_dir and $dependent"
+    echo "Cloning extra dependency $extra_dependency to patch its default branch into $this_repo and $dependent"
     git clone \
       --depth=1 \
       "$org_github_prefix/$extra_dependency.git" \
