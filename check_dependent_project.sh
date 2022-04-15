@@ -291,7 +291,7 @@ process_pr_description_line() {
     # be named "master")
     git clone \
       --depth=$merge_ancestor_max_depth \
-      "https://github.com/$org/$repo.git" \
+      "$org_github_prefix/$repo.git" \
       "$companions_dir/$repo"
     pushd "$companions_dir/$repo" >/dev/null
 
