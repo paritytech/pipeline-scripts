@@ -386,14 +386,19 @@ patch_and_check_dependent() {
 
   # It is necessary to patch in extra dependencies which have already been
   # merged in previous steps of the Companion Build System's dependency chain.
-  # For instance, when Cumulus is the dependent on Polkadot's pipeline, it is
-  # necessary to patch the master of Substrate into it since master will contain
-  # the pull request which was part of the dependency chain for this PR and was
-  # merged before it.
+  # For instance, consider the following dependency chain:
+  #     Substrate -> Polkadot -> Cumulus
+  # When this script is running for Cumulus as the dependent, on Polkadot's
+  # pipeline, it is necessary to patch the master of Substrate into this
+  # script's branches because Substrate's master will contain the pull request
+  # which was part of the dependency chain for this PR and was merged before
+  # this script gets to run for the last time (after lockfile updates and before
+  # merge).
   for extra_dependency in $extra_dependencies; do
+    echo "Cloning extra dependency $extra_dependency to patch its default branch into $this_repo_dir and $dependent"
     git clone \
       --depth=1 \
-      "https://github.com/$org/$extra_dependency.git" \
+      "$org_github_prefix/$extra_dependency.git" \
       "$extra_dependencies_dir/$extra_dependency"
 
     echo "Patching extra dependency $extra_dependency into $this_repo_dir"
