@@ -364,20 +364,6 @@ process_pr_description() {
   done
 }
 
-update_crates() {
-  if [ $# -eq 0 ]; then
-    return
-  fi
-
-  local args=()
-
-  for crate in "$@"; do
-    args+=("-p" "$crate")
-  done
-
-  cargo update "${args[@]}"
-}
-
 patch_and_check_dependent() {
   local dependent="$1"
   local dependent_repo_dir="$2"
@@ -450,13 +436,6 @@ patch_and_check_dependent() {
   # would not yet how be how it should become after all merges are finished.
   match_dependent_crates "$dependent"
 
-  # Update the crates to the latest version. This is for example needed if there
-  # was a PR to Substrate which only required a Polkadot companion and Cumulus
-  # wasn't yet updated to use the latest commit of Polkadot.
-  # This should be done only *AFTER* patching so that "cargo update" will be
-  # able to find new crates introduced in the current pull request.
-  update_crates $update_crates_on_default_branch
-
   eval "${COMPANION_CHECK_COMMAND:-cargo check --all-targets --workspace}"
 
   popd >/dev/null
@@ -492,7 +471,7 @@ main() {
   if ! [ -e "$dependent_repo_dir" ]; then
     echo "Cloning $dependent_repo directly as it was not detected as a companion"
     dependent_repo_dir="$this_repo_dir/$dependent_repo"
-    git clone --depth=1 "https://github.com/$org/$dependent_repo.git" "$dependent_repo_dir"
+    git clone --depth=1 "$org_github_prefix/$dependent_repo.git" "$dependent_repo_dir"
   fi
 
   patch_and_check_dependent "$dependent_repo" "$dependent_repo_dir"
