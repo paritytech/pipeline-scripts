@@ -36,9 +36,11 @@ this_repo_diener_arg="$3"
 dependent_repo="$4"
 github_api_token="$5"
 update_crates_on_default_branch="$6"
+extra_dependencies="${7:-}"
 
 this_repo_dir="$PWD"
 companions_dir="$this_repo_dir/companions"
+extra_dependencies_dir="$this_repo_dir/extra_dependencies"
 github_api="https://api.github.com"
 org_github_prefix="https://github.com/$org"
 org_crates_prefix="git+$org_github_prefix"
@@ -289,7 +291,7 @@ process_pr_description_line() {
     # be named "master")
     git clone \
       --depth=$merge_ancestor_max_depth \
-      "https://github.com/$org/$repo.git" \
+      "$org_github_prefix/$repo.git" \
       "$companions_dir/$repo"
     pushd "$companions_dir/$repo" >/dev/null
 
@@ -362,25 +364,41 @@ process_pr_description() {
   done
 }
 
-update_crates() {
-  if [ $# -eq 0 ]; then
-    return
-  fi
-
-  local args=()
-
-  for crate in "$@"; do
-    args+=("-p" "$crate")
-  done
-
-  cargo update "${args[@]}"
-}
-
 patch_and_check_dependent() {
   local dependent="$1"
   local dependent_repo_dir="$2"
 
   pushd "$dependent_repo_dir" >/dev/null
+
+  # It is necessary to patch in extra dependencies which have already been
+  # merged in previous steps of the Companion Build System's dependency chain.
+  # For instance, consider the following dependency chain:
+  #     Substrate -> Polkadot -> Cumulus
+  # When this script is running for Cumulus as the dependent, on Polkadot's
+  # pipeline, it is necessary to patch the master of Substrate into this
+  # script's branches because Substrate's master will contain the pull request
+  # which was part of the dependency chain for this PR and was merged before
+  # this script gets to run for the last time (after lockfile updates and before
+  # merge).
+  for extra_dependency in $extra_dependencies; do
+    echo "Cloning extra dependency $extra_dependency to patch its default branch into $this_repo and $dependent"
+    git clone \
+      --depth=1 \
+      "$org_github_prefix/$extra_dependency.git" \
+      "$extra_dependencies_dir/$extra_dependency"
+
+    echo "Patching extra dependency $extra_dependency into $this_repo_dir"
+    diener patch \
+      --target "$org_github_prefix/$extra_dependency" \
+      --crates-to-patch "$extra_dependencies_dir/$extra_dependency" \
+      --path "$this_repo_dir/Cargo.toml"
+
+    echo "Patching extra dependency $extra_dependency into $dependent"
+    diener patch \
+      --target "$org_github_prefix/$extra_dependency" \
+      --crates-to-patch "$extra_dependencies_dir/$extra_dependency" \
+      --path Cargo.toml
+  done
 
   # Patch this repository (the dependency) into the dependent for the sake of
   # being able to test how the dependency graph will behave after the merge
@@ -418,13 +436,6 @@ patch_and_check_dependent() {
   # would not yet how be how it should become after all merges are finished.
   match_dependent_crates "$dependent"
 
-  # Update the crates to the latest version. This is for example needed if there
-  # was a PR to Substrate which only required a Polkadot companion and Cumulus
-  # wasn't yet updated to use the latest commit of Polkadot.
-  # This should be done only *AFTER* patching so that "cargo update" will be
-  # able to find new crates introduced in the current pull request.
-  update_crates $update_crates_on_default_branch
-
   eval "${COMPANION_CHECK_COMMAND:-cargo check --all-targets --workspace}"
 
   popd >/dev/null
@@ -460,7 +471,7 @@ main() {
   if ! [ -e "$dependent_repo_dir" ]; then
     echo "Cloning $dependent_repo directly as it was not detected as a companion"
     dependent_repo_dir="$this_repo_dir/$dependent_repo"
-    git clone --depth=1 "https://github.com/$org/$dependent_repo.git" "$dependent_repo_dir"
+    git clone --depth=1 "$org_github_prefix/$dependent_repo.git" "$dependent_repo_dir"
   fi
 
   patch_and_check_dependent "$dependent_repo" "$dependent_repo_dir"
