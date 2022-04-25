@@ -11,18 +11,18 @@ get_arg() {
 
   local is_required
   case "$arg_type" in
-    required|required-multi)
+    required|required-many)
       is_required=true
     ;;
-    optional|optional-multi) ;;
+    optional|optional-many) ;;
     *)
       die "Invalid is_required argument \"$2\" in get_arg"
     ;;
   esac
 
-  local is_multi
-  if [ "${arg_type: -6}" == "-multi" ]; then
-    is_multi=true
+  local has_many_values
+  if [ "${arg_type: -6}" == "-many" ]; then
+    has_many_values=true
   fi
 
   local option_arg="$1"
@@ -35,14 +35,14 @@ get_arg() {
   for arg in "$@"; do
     if [ "${get_next_arg:-}" ]; then
       out+=("$arg")
-      if [ ! "${is_multi:-}" ]; then
+      unset get_next_arg
+      if [ ! "${has_many_values:-}" ]; then
         break
       fi
-      unset get_next_arg
     # --foo=bar (get the value after '=')
     elif [ "${arg:0:$(( ${#option_arg} + 1 ))}" == "$option_arg=" ]; then
       out+=("${arg:$(( ${#option_arg} + 1 ))}")
-      if [ ! "${is_multi:-}" ]; then
+      if [ ! "${has_many_values:-}" ]; then
         break
       fi
     # --foo bar (get the next argument)
@@ -52,7 +52,7 @@ get_arg() {
   done
 
   if [ "${out[0]:-}" ]; then
-    if [ ! "${is_multi:-}" ]; then
+    if [ ! "${has_many_values:-}" ]; then
       out="${out[0]}"
     fi
   elif [ "${is_required:-}" ]; then
