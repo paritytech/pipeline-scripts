@@ -39,7 +39,7 @@ extra_dependencies="${out:-}"
 
 set -x
 this_repo_dir="$PWD"
-this_repo="$(dirname "$PWD")"
+this_repo="$(basename "$this_repo_dir")"
 companions_dir="$this_repo_dir/companions"
 extra_dependencies_dir="$this_repo_dir/extra_dependencies"
 github_api="https://api.github.com"
