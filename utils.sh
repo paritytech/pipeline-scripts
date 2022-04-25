@@ -51,6 +51,11 @@ get_arg() {
     fi
   done
 
+  # arg list ended with --something but no argument was provided next
+  if [ "${get_next_arg:-}" ]; then
+    die "Expected argument after \"${args[-1]}"\"
+  fi
+
   if [ "${out[0]:-}" ]; then
     if [ ! "${has_many_values:-}" ]; then
       out="${out[0]}"
