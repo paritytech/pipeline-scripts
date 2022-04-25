@@ -25,10 +25,17 @@ shopt -s inherit_errexit
 
 . "$(dirname "${BASH_SOURCE[0]}")/utils.sh"
 
-get_arg required --org "$@"; org="$out"
-get_arg required --dependent-repo "$@"; dependent_repo="$out"
-get_arg required --github-api-token "$@"; github_api_token="$out"
-get_arg optional --extra-dependencies "$@"; extra_dependencies="${out:-}"
+get_arg required --org "$@"
+org="$out"
+
+get_arg required --dependent-repo "$@"
+dependent_repo="$out"
+
+get_arg required --github-api-token "$@"
+github_api_token="$out"
+
+get_arg optional --extra-dependencies "$@"
+extra_dependencies="${out:-}"
 
 set -x
 this_repo_dir="$PWD"
