@@ -28,11 +28,13 @@ get_arg() {
   local option_arg="$1"
   shift
 
+  local args=("$@")
+
   unset out
   out=()
 
   local get_next_arg
-  for arg in "$@"; do
+  for arg in "${args[@]}"; do
     if [ "${get_next_arg:-}" ]; then
       out+=("$arg")
       unset get_next_arg
