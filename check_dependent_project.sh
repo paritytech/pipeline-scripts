@@ -24,6 +24,7 @@ set -eu -o pipefail
 shopt -s inherit_errexit
 
 . "$(dirname "${BASH_SOURCE[0]}")/utils.sh"
+. "$(dirname "${BASH_SOURCE[0]}")/github_graphql.sh"
 
 get_arg required --org "$@"
 org="$out"
@@ -37,12 +38,16 @@ github_api_token="$out"
 get_arg optional --extra-dependencies "$@"
 extra_dependencies="${out:-}"
 
+get_arg optional-many --companion-overrides "$@"
+companion_overrides=("${out[@]}")
+
 set -x
 this_repo_dir="$PWD"
 this_repo="$(basename "$this_repo_dir")"
 companions_dir="$this_repo_dir/companions"
 extra_dependencies_dir="$this_repo_dir/extra_dependencies"
 github_api="https://api.github.com"
+github_graphql_api="https://api.github.com/graphql"
 org_github_prefix="https://github.com/$org"
 org_crates_prefix="git+$org_github_prefix"
 set +x
@@ -333,30 +338,37 @@ Both cases can be solved by merging master into $repo#$pr_number.
   fi
 }
 
+declare -A pr_base_ref
+pr_base_ref=()
 process_pr_description() {
   local repo="$1"
   local pr_number="$2"
 
-  if ! [[ "$pr_number" =~ ^[[:digit:]]+$ ]]; then
-    return
-  fi
-
   echo "Processing PR $repo#$pr_number"
 
+  local has_read_base_ref base_ref
   local lines=()
   while IFS= read -r line; do
-    lines+=("$line")
+    if [ "${has_read_base_ref:-}" ]; then
+      lines+=("$line")
+    else
+      base_ref="$line"
+      has_read_base_ref=true
+    fi
   done < <(curl \
       -sSL \
       -H "Authorization: token $github_api_token" \
       "$github_api/repos/$org/$repo/pulls/$pr_number" | \
-    jq -e -r ".body"
+    jq -e -r ".base.ref, .body"
   )
   # in case the PR has no body, jq should have printed "null" which effectively
   # means lines will always be populated with something
+  # shellcheck disable=SC2128
   if ! [ "$lines" ]; then
     die "No lines were read for the description of PR $pr_number (some error probably occurred)"
   fi
+
+  pr_base_ref["$repo"]="$base_ref"
 
   for line in "${lines[@]}"; do
     if [[ "$line" =~ [cC]ompanion:[[:space:]]*([^[:space:]]+) ]]; then
@@ -372,35 +384,39 @@ patch_and_check_dependent() {
 
   pushd "$dependent_repo_dir" >/dev/null
 
-  # It is necessary to patch in extra dependencies which have already been
-  # merged in previous steps of the Companion Build System's dependency chain.
-  # For instance, consider the following dependency chain:
-  #     Substrate -> Polkadot -> Cumulus
-  # When this script is running for Cumulus as the dependent, on Polkadot's
-  # pipeline, it is necessary to patch the master of Substrate into this
-  # script's branches because Substrate's master will contain the pull request
-  # which was part of the dependency chain for this PR and was merged before
-  # this script gets to run for the last time (after lockfile updates and before
-  # merge).
-  for extra_dependency in $extra_dependencies; do
-    echo "Cloning extra dependency $extra_dependency to patch its default branch into $this_repo and $dependent"
-    git clone \
-      --depth=1 \
-      "$org_github_prefix/$extra_dependency.git" \
-      "$extra_dependencies_dir/$extra_dependency"
+  if [ "${has_overridden_dependent_repo_ref:-}" ]; then
+    echo "Skipping extra_dependencies ($extra_dependencies) as the dependent repository's ref has been overridden"
+  else
+    # It is necessary to patch in extra dependencies which have already been
+    # merged in previous steps of the Companion Build System's dependency chain.
+    # For instance, consider the following dependency chain:
+    #     Substrate -> Polkadot -> Cumulus
+    # When this script is running for Cumulus as the dependent, on Polkadot's
+    # pipeline, it is necessary to patch the master of Substrate into this
+    # script's branches because Substrate's master will contain the pull request
+    # which was part of the dependency chain for this PR and was merged before
+    # this script gets to run for the last time (after lockfile updates and before
+    # merge).
+    for extra_dependency in $extra_dependencies; do
+      echo "Cloning extra dependency $extra_dependency to patch its default branch into $this_repo and $dependent"
+      git clone \
+        --depth=1 \
+        "$org_github_prefix/$extra_dependency.git" \
+        "$extra_dependencies_dir/$extra_dependency"
 
-    echo "Patching extra dependency $extra_dependency into $this_repo_dir"
-    diener patch \
-      --target "$org_github_prefix/$extra_dependency" \
-      --crates-to-patch "$extra_dependencies_dir/$extra_dependency" \
-      --path "$this_repo_dir/Cargo.toml"
+      echo "Patching extra dependency $extra_dependency into $this_repo_dir"
+      diener patch \
+        --target "$org_github_prefix/$extra_dependency" \
+        --crates-to-patch "$extra_dependencies_dir/$extra_dependency" \
+        --path "$this_repo_dir/Cargo.toml"
 
-    echo "Patching extra dependency $extra_dependency into $dependent"
-    diener patch \
-      --target "$org_github_prefix/$extra_dependency" \
-      --crates-to-patch "$extra_dependencies_dir/$extra_dependency" \
-      --path Cargo.toml
-  done
+      echo "Patching extra dependency $extra_dependency into $dependent"
+      diener patch \
+        --target "$org_github_prefix/$extra_dependency" \
+        --crates-to-patch "$extra_dependencies_dir/$extra_dependency" \
+        --path Cargo.toml
+    done
+  fi
 
   # Patch this repository (the dependency) into the dependent for the sake of
   # being able to test how the dependency graph will behave after the merge
@@ -444,37 +460,158 @@ patch_and_check_dependent() {
 }
 
 main() {
+  if ! [[ "$CI_COMMIT_REF_NAME" =~ ^[[:digit:]]+$ ]]; then
+    die "\"$CI_COMMIT_REF_NAME\" was not recognized as a pull request ref"
+  fi
+
   # Set the user name and email to make merging work
   git config --global user.name 'CI system'
   git config --global user.email '<>'
   git config --global pull.rebase false
-
-  # Merge master into this branch so that we have a better expectation of the
-  # integration still working after this PR lands.
-  # Since master's HEAD is being merged here, at the start the dependency chain,
-  # the same has to be done for all the companions because they might have
-  # accompanying changes for the code being brought in.
-  git fetch --force origin master
-  git show-ref origin/master
-  echo "Merge master into $this_repo#$CI_COMMIT_REF_NAME"
-  git merge origin/master \
-    --verbose \
-    --no-edit \
-    -m "Merge master into $this_repo#$CI_COMMIT_REF_NAME"
-
-  discover_our_crates
 
   # process_pr_description calls itself for each companion in the description on
   # each detected companion PR, effectively considering all companion references
   # on all PRs
   process_pr_description "$this_repo" "$CI_COMMIT_REF_NAME"
 
+  # This PR might be targetting a custom ref (i.e. not master) through
+  # --companion-overrides, in which case it won't be proper to merge master
+  # (since it's not targetting master) before realizing the companion checks
   local dependent_repo_dir="$companions_dir/$dependent_repo"
   if ! [ -e "$dependent_repo_dir" ]; then
-    echo "Cloning $dependent_repo directly as it was not detected as a companion"
+    local dependent_clone_options=(
+      --depth=1
+    )
+
+    if [ "${pr_base_ref[$this_repo]}" == "master" ]; then
+      echo "Cloning dependent $dependent_repo directly as it was not detected as a companion"
+    else
+      for override in "${companion_overrides[@]}"; do
+        local this_repo_override this_repo_override_prefix dependent_repo_override dependent_repo_override_prefix
+
+        while IFS= read -r line; do
+          if [[ "$line" =~ ^[[:space:]]*$this_repo:[[:space:]]*(.*) ]]; then
+            this_repo_override="${BASH_REMATCH[1]}"
+            if [[ "$this_repo_override" =~ ^(.*)\* ]]; then
+              this_repo_override_prefix="${BASH_REMATCH[1]}"
+            fi
+          elif [[ "$line" =~ ^[[:space:]]*$dependent_repo:[[:space:]]*(.*) ]]; then
+            dependent_repo_override="${BASH_REMATCH[1]}"
+            if [[ "$dependent_repo_override" =~ ^(.*)\* ]]; then
+              dependent_repo_override_prefix="${BASH_REMATCH[1]}"
+            fi
+          fi
+        done < <(echo "$override")
+
+        if [[
+          ! ("${this_repo_override:-}") ||
+          ! ("${dependent_repo_override:-}")
+        ]]; then
+          continue
+        fi
+
+        local base_ref_prefix="${this_repo_override_prefix:-$this_repo_override}"
+        if [ "${pr_base_ref[$this_repo]:0:${#base_ref_prefix}}" != "$base_ref_prefix" ]; then
+          continue
+        fi
+
+        local this_repo_override_suffix
+        if [ "${this_repo_override_prefix:-}" ]; then
+          this_repo_override_suffix="${pr_base_ref[$this_repo]:${#this_repo_override_prefix}}"
+        fi
+
+        dependent_clone_options+=("--branch")
+        local branch_name
+        if [[
+          ("${dependent_repo_override_prefix:-}") &&
+          ("${this_repo_override_suffix:-}")
+        ]]; then
+          branch_name="${dependent_repo_override_prefix}${this_repo_override_suffix}"
+
+          echo "Checking if $branch_name exists in $dependent_repo"
+          local response_code
+          response_code="$(curl \
+            -o /dev/null \
+            -sSL \
+            -H "Authorization: token $github_api_token" \
+            -w '%{response_code}' \
+            "$github_api/repos/$org/$dependent_repo/branches/$branch_name"
+          )"
+
+          if [ "$response_code" -eq 200 ]; then
+            echo "Branch $branch_name exists in $dependent_repo. Proceeding..."
+          else
+            echo "Branch $branch_name doesn't exist in $dependent_repo (status code $response_code)"
+            echo "Fetching the list of branches in $dependent_repo to find a suitable replacement..."
+
+            local successor_branch_name
+            while IFS= read -r line; do
+              echo "Got candidate branch $line in $dependent_repo's refs"
+              if [ "${line:0:${#dependent_repo_override_prefix}}" == "$dependent_repo_override_prefix" ]; then
+                echo "Found candidate branch $line as the successor of $branch_name"
+                successor_branch_name="$line"
+                break
+              fi
+            done < <(ghgql_post \
+              "$github_graphql_api" \
+              "$github_api_token" \
+              "$(
+                ghgql_latest_repositories_refs_query \
+                  "$org" \
+                  "$dependent_repo" \
+                  "$dependent_repo_override_prefix"
+              )" | jq -r '.data.repository.refs.edges[].node.name'
+            )
+
+            if [ "${successor_branch_name:-}" ]; then
+              echo "Choosing branch $line as a successor for $branch_name"
+              branch_name="$successor_branch_name"
+              unset successor_branch_name
+            else
+              die "Unable to find the successor for non-existent branch $branch_name of $dependent_repo"
+            fi
+          fi
+        else
+          branch_name="$dependent_repo_override"
+        fi
+        dependent_clone_options+=("$branch_name")
+
+        echo "Setting up the clone of $dependent_repo with options: ${dependent_clone_options[*]}"
+
+        # when a ref is matched through --companion-overrides, don't merge
+        # master into the branch in order to avoid disturbing its state
+        has_overridden_dependent_repo_ref=true
+
+        break
+      done
+    fi
+
     dependent_repo_dir="$this_repo_dir/$dependent_repo"
-    git clone --depth=1 "$org_github_prefix/$dependent_repo.git" "$dependent_repo_dir"
+    # shellcheck disable=SC2068
+    git clone \
+      ${dependent_clone_options[@]} \
+      "$org_github_prefix/$dependent_repo.git" \
+      "$dependent_repo_dir"
   fi
+
+  if [ "${has_overridden_dependent_repo_ref:-}" ]; then
+    echo "Skipping master merge of $this_repo as the dependent repository's ref has been overridden"
+  else
+    # Merge master into this branch so that we have a better expectation of the
+    # integration still working after this PR lands.
+    # Since master's HEAD is being merged here, at the start the dependency chain,
+    # the same has to be done for all the companions because they might have
+    # accompanying changes for the code being brought in.
+    git fetch --force origin master
+    git show-ref origin/master
+    echo "Merge master into $this_repo#$CI_COMMIT_REF_NAME"
+    git merge origin/master \
+      --verbose \
+      --no-edit \
+      -m "Merge master into $this_repo#$CI_COMMIT_REF_NAME"
+  fi
+
+  discover_our_crates
 
   patch_and_check_dependent "$dependent_repo" "$dependent_repo_dir"
 }
