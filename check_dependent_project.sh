@@ -338,6 +338,15 @@ Both cases can be solved by merging master into $repo#$pr_number.
   fi
 }
 
+declare -A companion_branch_override
+companion_branch_override=()
+detect_companion_branch_override() {
+  local line="$1"
+  if [[ "$line" =~ ^[[:space:]]*([^[:space:]]+)[[:space:]]+companion[[:space:]]+branch:[[:space:]]*([^[:space:]]+) ]]; then
+    companion_branch_override["${BASH_REMATCH[1]}"]="${BASH_REMATCH[2]}"
+  fi
+}
+
 declare -A pr_base_ref
 pr_base_ref=()
 process_pr_description() {
@@ -351,6 +360,7 @@ process_pr_description() {
   while IFS= read -r line; do
     if [ "${has_read_base_ref:-}" ]; then
       lines+=("$line")
+      detect_companion_branch_override "$line"
     else
       base_ref="$line"
       has_read_base_ref=true
@@ -485,6 +495,10 @@ main() {
 
     if [ "${pr_base_ref[$this_repo]}" == "master" ]; then
       echo "Cloning dependent $dependent_repo directly as it was not detected as a companion"
+    elif [ "${companion_branch_override[$dependent_repo]:-}" ]; then
+      echo "Cloning dependent $dependent_repo with branch ${companion_branch_override[$dependent_repo]} from manual override"
+      dependent_clone_options+=("--branch" "${companion_branch_override[$dependent_repo]}")
+      has_overridden_dependent_repo_ref=true
     else
       for override in "${companion_overrides[@]}"; do
         local this_repo_override this_repo_override_prefix dependent_repo_override dependent_repo_override_prefix
@@ -577,9 +591,6 @@ main() {
         dependent_clone_options+=("$branch_name")
 
         echo "Setting up the clone of $dependent_repo with options: ${dependent_clone_options[*]}"
-
-        # when a ref is matched through --companion-overrides, don't merge
-        # master into the branch in order to avoid disturbing its state
         has_overridden_dependent_repo_ref=true
 
         break

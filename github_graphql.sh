@@ -36,7 +36,7 @@ ghgql_post() {
   >&2 echo "
 Sending GraphQL body to $github_graphql_api
 Raw query: $query
-JSON body: $req_body
+Request body: $req_body
 "
 
   curl \
