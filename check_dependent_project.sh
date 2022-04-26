@@ -23,27 +23,29 @@ changes.
 set -eu -o pipefail
 shopt -s inherit_errexit
 
-die() {
-  if [ "${1:-}" ]; then
-    >&2 echo "$1"
-  fi
-  exit 1
-}
+. "$(dirname "${BASH_SOURCE[0]}")/utils.sh"
 
-org="$1"
-this_repo="$2"
-this_repo_diener_arg="$3"
-dependent_repo="$4"
-github_api_token="$5"
-update_crates_on_default_branch="$6"
-extra_dependencies="${7:-}"
+get_arg required --org "$@"
+org="$out"
 
+get_arg required --dependent-repo "$@"
+dependent_repo="$out"
+
+get_arg required --github-api-token "$@"
+github_api_token="$out"
+
+get_arg optional --extra-dependencies "$@"
+extra_dependencies="${out:-}"
+
+set -x
 this_repo_dir="$PWD"
+this_repo="$(basename "$this_repo_dir")"
 companions_dir="$this_repo_dir/companions"
 extra_dependencies_dir="$this_repo_dir/extra_dependencies"
 github_api="https://api.github.com"
 org_github_prefix="https://github.com/$org"
 org_crates_prefix="git+$org_github_prefix"
+set +x
 
 our_crates=()
 discover_our_crates() {
