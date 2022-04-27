@@ -348,8 +348,8 @@ detect_companion_branch_override() {
   fi
 }
 
-declare -A pr_base_ref
-pr_base_ref=()
+declare -A pr_target_branch
+pr_target_branch=()
 process_pr_description() {
   local repo="$1"
   local pr_number="$2"
@@ -379,7 +379,7 @@ process_pr_description() {
     die "No lines were read for the description of PR $pr_number (some error probably occurred)"
   fi
 
-  pr_base_ref["$repo"]="$base_ref"
+  pr_target_branch["$repo"]="$base_ref"
 
   for line in "${lines[@]}"; do
     if [[ "$line" =~ [cC]ompanion:[[:space:]]*([^[:space:]]+) ]]; then
@@ -494,7 +494,7 @@ main() {
       --depth=1
     )
 
-    if [ "${pr_base_ref[$this_repo]}" == "master" ]; then
+    if [ "${pr_target_branch[$this_repo]}" == "master" ]; then
       echo "Cloning dependent $dependent_repo directly as it was not detected as a companion"
     elif [ "${companion_branch_override[$dependent_repo]:-}" ]; then
       echo "Cloning dependent $dependent_repo with branch ${companion_branch_override[$dependent_repo]} from manual override"
@@ -529,13 +529,13 @@ main() {
         echo "Detected override $this_repo_override for $this_repo and override $dependent_repo_override for $dependent_repo"
 
         local base_ref_prefix="${this_repo_override_prefix:-$this_repo_override}"
-        if [ "${pr_base_ref[$this_repo]:0:${#base_ref_prefix}}" != "$base_ref_prefix" ]; then
+        if [ "${pr_target_branch[$this_repo]:0:${#base_ref_prefix}}" != "$base_ref_prefix" ]; then
           continue
         fi
 
         local this_repo_override_suffix
         if [ "${this_repo_override_prefix:-}" ]; then
-          this_repo_override_suffix="${pr_base_ref[$this_repo]:${#this_repo_override_prefix}}"
+          this_repo_override_suffix="${pr_target_branch[$this_repo]:${#this_repo_override_prefix}}"
         fi
 
         dependent_clone_options+=("--branch")
