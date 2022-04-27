@@ -26,15 +26,33 @@ the specified PR rather than the default branch for that companion's repository.
 
 ---
 
-On pull requests **not targetting the master branch** you're able to specify the
-branch directly:
+On pull requests **which don't target master** you're able to specify the
+companion's branch in the pull request's description:
 
 ```
 polkadot companion branch: [branch]
 ```
 
 The above tells the script to use the specified branch in `${ORG}/polkadot`
-rather than the master branch.
+rather than the default branch for that companion's repository.
+
+Alternatively, you can also specify a permanent override configuration through
+`--companion-overrides`. Suppose the following:
+
+```bash
+check_dependent_project.sh \
+  --companion-overrides "
+    substrate: polkadot-v*
+    polkadot: release-v*
+  "
+```
+
+The above configures the script to use, for example, the `release-v1` Polkadot
+branch for the companion in case the Substrate pull request is **targetting**
+the `polkadot-v1` branch - note how the suffix captured from the wildcard
+pattern, namely `1` from the pattern `*`, is correlated between those refs. This
+feature exists for the sake of testing the CI before a release (more context in
+[issue 32](https://github.com/paritytech/pipeline-scripts/issues/32)).
 
 ## Explanation <a name="check_dependent_project-explanation"></a>
 
