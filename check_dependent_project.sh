@@ -342,7 +342,7 @@ declare -A companion_branch_override
 companion_branch_override=()
 detect_companion_branch_override() {
   local line="$1"
-  # detects the form "repository companion branch: foo"
+  # detects the form "[repository] companion branch: [branch]"
   if [[ "$line" =~ ^[[:space:]]*([^[:space:]]+)[[:space:]]+companion[[:space:]]+branch:[[:space:]]*([^[:space:]]+) ]]; then
     companion_branch_override["${BASH_REMATCH[1]}"]="${BASH_REMATCH[2]}"
   fi
@@ -484,9 +484,10 @@ main() {
   # on all PRs
   process_pr_description "$this_repo" "$CI_COMMIT_REF_NAME"
 
-  # This PR might be targetting a custom ref (i.e. not master) through
-  # --companion-overrides, in which case it won't be proper to merge master
-  # (since it's not targetting master) before realizing the companion checks
+  # This PR might be targetting a custom ref (i.e. not master) through companion
+  # overrides from --companion-overrides or the PR's description, in which case
+  # it won't be proper to merge master (since it's not targetting master) before
+  # performing the companion checks
   local dependent_repo_dir="$companions_dir/$dependent_repo"
   if ! [ -e "$dependent_repo_dir" ]; then
     local dependent_clone_options=(
