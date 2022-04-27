@@ -342,6 +342,7 @@ declare -A companion_branch_override
 companion_branch_override=()
 detect_companion_branch_override() {
   local line="$1"
+  # detects the form "repository companion branch: foo"
   if [[ "$line" =~ ^[[:space:]]*([^[:space:]]+)[[:space:]]+companion[[:space:]]+branch:[[:space:]]*([^[:space:]]+) ]]; then
     companion_branch_override["${BASH_REMATCH[1]}"]="${BASH_REMATCH[2]}"
   fi
