@@ -27,7 +27,7 @@ the specified PR rather than the default branch for that companion's repository.
 ---
 
 On pull requests **which don't target master** you're able to specify the
-companion's branch in the pull request's description:
+companion's branch in their description:
 
 ```
 polkadot companion branch: [branch]
@@ -47,11 +47,11 @@ check_dependent_project.sh \
   "
 ```
 
-The above configures the script to use, for example, the `release-v1` Polkadot
+The above configures the script to use, for example, the `release-v1.2` Polkadot
 branch for the companion in case the Substrate pull request is **targetting**
-the `polkadot-v1` branch - note how the suffix captured from the wildcard
-pattern, namely `1` from the pattern `*`, is correlated between those refs. This
-feature exists for the sake of testing the CI before a release (more context in
+the `polkadot-v1.2` branch - note how the suffix captured from the wildcard
+pattern, namely `1.2` from the pattern `*`, is correlated between those refs.
+This feature exists for release engineering purposes (more context in
 [issue 32](https://github.com/paritytech/pipeline-scripts/issues/32)).
 
 ## Explanation <a name="check_dependent_project-explanation"></a>
