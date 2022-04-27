@@ -526,6 +526,8 @@ main() {
           continue
         fi
 
+        echo "Detected override $this_repo_override for $this_repo and override $dependent_repo_override for $dependent_repo"
+
         local base_ref_prefix="${this_repo_override_prefix:-$this_repo_override}"
         if [ "${pr_base_ref[$this_repo]:0:${#base_ref_prefix}}" != "$base_ref_prefix" ]; then
           continue
