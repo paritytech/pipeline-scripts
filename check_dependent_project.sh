@@ -502,8 +502,9 @@ main() {
       has_overridden_dependent_repo_ref=true
     else
       for override in "${companion_overrides[@]}"; do
-        local this_repo_override this_repo_override_prefix dependent_repo_override dependent_repo_override_prefix
+        echo "Processing companion override $override"
 
+        local this_repo_override this_repo_override_prefix dependent_repo_override dependent_repo_override_prefix
         while IFS= read -r line; do
           if [[ "$line" =~ ^[[:space:]]*$this_repo:[[:space:]]*(.*) ]]; then
             this_repo_override="${BASH_REMATCH[1]}"
