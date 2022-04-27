@@ -1,3 +1,5 @@
+#!/usr/bin/env bash
+
 die() {
   if [ "${1:-}" ]; then
     >&2 echo "$1"

@@ -1,3 +1,5 @@
+#!/usr/bin/env bash
+
 ghgql_latest_repositories_refs_query() {
   unset out
 
