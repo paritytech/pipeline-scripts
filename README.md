@@ -6,9 +6,37 @@ many repositories) for our CI pipelines.
 # TOC
 
 - [check_dependent_project](#check_dependent_project)
+  - [Usage](#check_dependent_project-usage)
+  - [Explanation](#check_dependent_project-explanation)
   - [Implementation](#check_dependent_project-implementation)
 
 # check_dependent_project <a name="check_dependent_project"></a>
+
+## Usage <a name="check_dependent_project-explanation"></a>
+
+Specify companions in the description of a pull request. For example, if you
+have a pull request which needs a Polkadot companion, say:
+
+```
+polkadot companion: [link]
+```
+
+The above tells the integration checks to test the pull request's branch with
+the specified PR rather than the default branch for that companion's repository.
+
+---
+
+On pull requests **not targetting the master branch** you're able to specify the
+branch directly:
+
+```
+polkadot companion branch: [branch]
+```
+
+The above tells the script to use the specified branch in `${ORG}/polkadot`
+rather than the master branch.
+
+## Explanation <a name="check_dependent_project-explanation"></a>
 
 [check_dependent_project](./check_dependent_project.sh) implements the
 [Companion Build System](https://github.com/paritytech/parity-processbot/issues/327)'s
