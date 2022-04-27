@@ -12,7 +12,7 @@ many repositories) for our CI pipelines.
 
 # check_dependent_project <a name="check_dependent_project"></a>
 
-## Usage <a name="check_dependent_project-explanation"></a>
+## Usage <a name="check_dependent_project-usage"></a>
 
 Specify companions in the description of a pull request. For example, if you
 have a pull request which needs a Polkadot companion, say:
