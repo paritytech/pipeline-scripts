@@ -569,14 +569,12 @@ main() {
             echo "Branch $branch_name doesn't exist in $dependent_repo (status code $response_code)"
             echo "Fetching the list of branches in $dependent_repo to find a suitable replacement..."
 
-            # The guessing for the inexistent ref branch works by taking the
-            # most recently updated branch (ordered by commit date) which
-            # follows the pattern we're following for the branch name. For
-            # example, if polkadot-v0.9.20 does not exist, take the latest (by
-            # commit date) branch following a "polkadot-v*" pattern, which
-            # happens to be polkadot-v0.9.19 as of this writing; in this
-            # scenario, polkadot-v0.9.19 should be chosen as a best-effort guess
-            # replacement for polkadot-v0.9.20 because it's the most recent.
+            # The guessing for a replacement branch works by taking the most
+            # recently updated branch (ordered by commit date) which follows the
+            # pattern we've matched for the branch name. For example, if
+            # polkadot-v0.9.20 does not exist, instead use the latest (by commit
+            # date) branch following a "polkadot-v*" pattern, which happens to
+            # be polkadot-v0.9.19 as of this writing.
             local replacement_branch_name
             while IFS= read -r line; do
               echo "Got candidate branch $line in $dependent_repo's refs"
