@@ -356,15 +356,14 @@ process_pr_description() {
 
   echo "Processing PR $repo#$pr_number"
 
-  local has_read_base_ref base_ref
+  local base_ref
   local lines=()
   while IFS= read -r line; do
-    if [ "${has_read_base_ref:-}" ]; then
+    if [ "${base_ref:-}" ]; then
       lines+=("$line")
       detect_companion_branch_override "$line"
     else
       base_ref="$line"
-      has_read_base_ref=true
     fi
   done < <(curl \
       -sSL \
@@ -395,7 +394,7 @@ patch_and_check_dependent() {
 
   pushd "$dependent_repo_dir" >/dev/null
 
-  if [ "${has_overridden_dependent_repo_ref:-}" ]; then
+  if [ "${has_overridden_dependent_ref:-}" ]; then
     echo "Skipping extra_dependencies ($extra_dependencies) as the dependent repository's ref has been overridden"
   else
     # It is necessary to patch in extra dependencies which have already been
@@ -499,7 +498,7 @@ main() {
     elif [ "${companion_branch_override[$dependent_repo]:-}" ]; then
       echo "Cloning dependent $dependent_repo with branch ${companion_branch_override[$dependent_repo]} from manual override"
       dependent_clone_options+=("--branch" "${companion_branch_override[$dependent_repo]}")
-      has_overridden_dependent_repo_ref=true
+      has_overridden_dependent_ref=true
     else
       for override in "${companion_overrides[@]}"; do
         echo "Processing companion override $override"
@@ -610,7 +609,7 @@ main() {
         dependent_clone_options+=("$branch_name")
 
         echo "Setting up the clone of $dependent_repo with options: ${dependent_clone_options[*]}"
-        has_overridden_dependent_repo_ref=true
+        has_overridden_dependent_ref=true
 
         break
       done
@@ -624,7 +623,7 @@ main() {
       "$dependent_repo_dir"
   fi
 
-  if [ "${has_overridden_dependent_repo_ref:-}" ]; then
+  if [ "${has_overridden_dependent_ref:-}" ]; then
     echo "Skipping master merge of $this_repo as the dependent repository's ref has been overridden"
   else
     # Merge master into this branch so that we have a better expectation of the
