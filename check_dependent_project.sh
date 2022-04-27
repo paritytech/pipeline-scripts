@@ -553,18 +553,33 @@ main() {
             "$github_api/repos/$org/$dependent_repo/branches/$branch_name"
           )"
 
+          # Sometimes the target branch found via override does not *yet* exist
+          # in the companion's repository because their release processes work
+          # differently; e.g. a release-v0.9.20 Polkadot branch might have a
+          # polkadot-v0.9.20 matching branch (notice the version) on Substrate,
+          # but not yet on Cumulus because their release approach is different.
+          # When that happens, the script has no choice other than *guess* the
+          # a replacement branch to be used for the inexistent branch.
           if [ "$response_code" -eq 200 ]; then
             echo "Branch $branch_name exists in $dependent_repo. Proceeding..."
           else
             echo "Branch $branch_name doesn't exist in $dependent_repo (status code $response_code)"
             echo "Fetching the list of branches in $dependent_repo to find a suitable replacement..."
 
-            local successor_branch_name
+            # The guessing for the inexistent ref branch works by taking the
+            # most recently updated branch (ordered by commit date) which
+            # follows the pattern we're following for the branch name. For
+            # example, if polkadot-v0.9.20 does not exist, take the latest (by
+            # commit date) branch following a "polkadot-v*" pattern, which
+            # happens to be polkadot-v0.9.19 as of this writing; in this
+            # scenario, polkadot-v0.9.19 should be chosen as a best-effort guess
+            # replacement for polkadot-v0.9.20 because it's the most recent.
+            local replacement_branch_name
             while IFS= read -r line; do
               echo "Got candidate branch $line in $dependent_repo's refs"
               if [ "${line:0:${#dependent_repo_override_prefix}}" == "$dependent_repo_override_prefix" ]; then
-                echo "Found candidate branch $line as the successor of $branch_name"
-                successor_branch_name="$line"
+                echo "Found candidate branch $line as the replacement of $branch_name"
+                replacement_branch_name="$line"
                 break
               fi
             done < <(ghgql_post \
@@ -578,12 +593,12 @@ main() {
               )" | jq -r '.data.repository.refs.edges[].node.name'
             )
 
-            if [ "${successor_branch_name:-}" ]; then
-              echo "Choosing branch $line as a successor for $branch_name"
-              branch_name="$successor_branch_name"
-              unset successor_branch_name
+            if [ "${replacement_branch_name:-}" ]; then
+              echo "Choosing branch $line as a replacement for $branch_name"
+              branch_name="$replacement_branch_name"
+              unset replacement_branch_name
             else
-              die "Unable to find the successor for non-existent branch $branch_name of $dependent_repo"
+              die "Unable to find the replacement for inexistent branch $branch_name of $dependent_repo"
             fi
           fi
         else
