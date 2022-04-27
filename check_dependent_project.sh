@@ -587,7 +587,7 @@ main() {
               "$github_graphql_api" \
               "$github_api_token" \
               "$(
-                ghgql_latest_repositories_refs_query \
+                ghgql_most_recent_branches_query \
                   "$org" \
                   "$dependent_repo" \
                   "$dependent_repo_override_prefix"
