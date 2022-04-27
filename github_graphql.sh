@@ -1,8 +1,6 @@
 #!/usr/bin/env bash
 
 ghgql_latest_repositories_refs_query() {
-  unset out
-
   local org="$1"
   local repo="$2"
   local refs_query="$3"
