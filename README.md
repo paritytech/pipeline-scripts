@@ -33,11 +33,11 @@ companion's branch in their description:
 polkadot companion branch: [branch]
 ```
 
-The above tells the script to use the specified branch in `${ORG}/polkadot`
+The above tells the script to use the specified branch from `${ORG}/polkadot`
 rather than the default branch for that companion's repository.
 
-Alternatively, you can also specify a permanent override configuration through
-`--companion-overrides`. Suppose the following:
+Alternatively, it's also possible to provide a permanent override configuration
+through `--companion-overrides`. As an example:
 
 ```bash
 check_dependent_project.sh \
@@ -47,12 +47,12 @@ check_dependent_project.sh \
   "
 ```
 
-The above configures the script to use, for example, the `release-v1.2` Polkadot
-branch for the companion in case the Substrate pull request is **targetting**
-the `polkadot-v1.2` branch - note how the suffix captured from the wildcard
-pattern, namely `1.2` from the pattern `*`, is correlated between those refs.
-This feature exists for release engineering purposes (more context in
-[issue 32](https://github.com/paritytech/pipeline-scripts/issues/32)).
+The above configures the script to use, for instance, the `release-v1.2`
+Polkadot branch for the companion in case the Substrate pull request is
+**targetting** the `polkadot-v1.2` branch - note how the suffix captured from
+the wildcard pattern, namely `1.2` from the pattern `*`, is correlated between
+those refs. This feature exists for release engineering purposes (more context
+in [issue 32](https://github.com/paritytech/pipeline-scripts/issues/32)).
 
 ## Explanation <a name="check_dependent_project-explanation"></a>
 
