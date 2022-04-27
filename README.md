@@ -6,9 +6,55 @@ many repositories) for our CI pipelines.
 # TOC
 
 - [check_dependent_project](#check_dependent_project)
+  - [Usage](#check_dependent_project-usage)
+  - [Explanation](#check_dependent_project-explanation)
   - [Implementation](#check_dependent_project-implementation)
 
 # check_dependent_project <a name="check_dependent_project"></a>
+
+## Usage <a name="check_dependent_project-usage"></a>
+
+Specify companions in the description of a pull request. For example, if you
+have a pull request which needs a Polkadot companion, say:
+
+```
+polkadot companion: [link]
+```
+
+The above tells the integration checks to test the pull request's branch with
+the specified PR rather than the default branch for that companion's repository.
+
+---
+
+On pull requests **which don't target master** you're able to specify the
+companion's branch in their description:
+
+```
+polkadot companion branch: [branch]
+```
+
+The above tells the script to use the specified branch from `${ORG}/polkadot`
+rather than the default branch for that companion's repository.
+
+Alternatively, it's also possible to provide a permanent override configuration
+through `--companion-overrides`. As an example:
+
+```bash
+check_dependent_project.sh \
+  --companion-overrides "
+    substrate: polkadot-v*
+    polkadot: release-v*
+  "
+```
+
+The above configures the script to use, for instance, the `release-v1.2`
+Polkadot branch for the companion in case the Substrate pull request is
+**targetting** the `polkadot-v1.2` branch - note how the suffix captured from
+the wildcard pattern, namely `1.2` from the pattern `*`, is correlated between
+those refs. This feature exists for release engineering purposes (more context
+in [issue 32](https://github.com/paritytech/pipeline-scripts/issues/32)).
+
+## Explanation <a name="check_dependent_project-explanation"></a>
 
 [check_dependent_project](./check_dependent_project.sh) implements the
 [Companion Build System](https://github.com/paritytech/parity-processbot/issues/327)'s
