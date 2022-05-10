@@ -122,6 +122,9 @@ main() {
   git config --global user.name command-bot
   git config --global user.email "<>"
 
+  # Reset the branch to how it was on GitHub before the command started
+  git reset --hard "$GH_HEAD_SHA"
+
   set -x
   # Runs the command to generate the weights
   process_args "$@"
@@ -134,10 +137,7 @@ main() {
 
   # Commits the weights and pushes it
   git add .
-  git reset .gitlab-ci.yml
-
   git commit -m "$COMMIT_MESSAGE"
-
   git remote add \
     github \
     "https://token:${GITHUB_TOKEN}@github.com/${GH_CONTRIBUTOR}/${GH_CONTRIBUTOR_REPO}.git"
