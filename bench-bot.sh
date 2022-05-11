@@ -122,7 +122,7 @@ main() {
   git config --global user.name command-bot
   git config --global user.email "<>"
 
-  # Reset the branch to how it was on GitHub before the command started
+  # Reset the branch to how it was on GitHub when the bot command was issued
   git reset --hard "$GH_HEAD_SHA"
 
   set -x
