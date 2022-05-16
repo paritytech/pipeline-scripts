@@ -381,7 +381,7 @@ process_pr_description() {
   pr_target_branch["$repo"]="$base_ref"
 
   for line in "${lines[@]}"; do
-    if [[ "$line" =~ [cC]ompanion:[[:space:]]*([^[:space:]]+) ]]; then
+    if [[ "$line" =~ ^[[:space:]]*[^[:space:]]+[[:space:]]+[cC]ompanion:[[:space:]]*([^[:space:]]+) ]]; then
       echo "Detected companion in the PR description of $repo#$pr_number: ${BASH_REMATCH[1]}"
       process_pr_description_line "${BASH_REMATCH[1]}" "$repo#$pr_number"
     fi
