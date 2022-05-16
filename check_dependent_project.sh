@@ -436,26 +436,42 @@ patch_and_check_dependent() {
     --crates-to-patch "$this_repo_dir" \
     --path Cargo.toml
 
-  # Detect the companions which are a dependency of dependent; e.g. when we're
-  # running this script in Substrate and the dependent for this job is Cumulus,
-  # a Polkadot companion is a dependency of the dependent since Cumulus depends
-  # on Polkadot
-  detect_dependencies_among_companions
+  # The patching procedure below only makes sense if a companion PR was
+  # specified for the dependent being targeted by this check, because then
+  # processbot will be able to push the lockfile updates to that PR while taking
+  # into account dependencies among companions; without a companion PR for the
+  # dependent, it's not sane to perform the following workaround because the
+  # dependent's lockfile would not be updated at the end of the merge chain due
+  # to the lack of a companion PR (which those lockfile updates would be pushed
+  # to), thus leaving the dependent's repository desynchronized.
+  # See https://github.com/paritytech/substrate/pull/11280#issue-1214392074 for
+  # a related workaround for that situation.
+  for companion in "${companions[@]}"; do
+    if [ "$companion" = "$dependent" ]; then
+      # Detect the companions which are a dependency of dependent; e.g. when
+      # we're running this script in Substrate and the dependent for this job is
+      # Cumulus, a Polkadot companion is a dependency of the dependent since
+      # Cumulus depends on Polkadot
+      detect_dependencies_among_companions
 
-  # Each companion dependency is also patched into the dependent so that the
-  # dependency graph becomes how it should end up after all PRs are merged
-  for comp in "${dependencies_among_companions[@]}"; do
-    echo "Patching $this_repo into the $comp companion, which is a dependency of $dependent, assuming $comp also depends on $this_repo. Reasoning: if a companion was referenced in this PR or a companion of this PR, then it probably has a dependency on this PR, since PR descriptions are processed starting from the dependencies."
-    diener patch \
-      --target "$org_github_prefix/$this_repo" \
-      --crates-to-patch "$this_repo_dir" \
-      --path "$companions_dir/$comp/Cargo.toml"
+      # Each companion dependency is also patched into the dependent so that the
+      # dependency graph becomes how it should end up after all PRs are merged
+      for comp in "${dependencies_among_companions[@]}"; do
+        echo "Patching $this_repo into the $comp companion, which is a dependency of $dependent, assuming $comp also depends on $this_repo. Reasoning: if a companion was referenced in this PR or a companion of this PR, then it probably has a dependency on this PR, since PR descriptions are processed starting from the dependencies."
+        diener patch \
+          --target "$org_github_prefix/$this_repo" \
+          --crates-to-patch "$this_repo_dir" \
+          --path "$companions_dir/$comp/Cargo.toml"
 
-    echo "Patching $comp companion into $dependent"
-    diener patch \
-      --target "$org_github_prefix/$comp" \
-      --crates-to-patch "$companions_dir/$comp" \
-      --path Cargo.toml
+        echo "Patching $comp companion into $dependent"
+        diener patch \
+          --target "$org_github_prefix/$comp" \
+          --crates-to-patch "$companions_dir/$comp" \
+          --path Cargo.toml
+      done
+
+      break
+    fi
   done
 
   # Match the crates *AFTER* patching for verifying that dependencies which are
