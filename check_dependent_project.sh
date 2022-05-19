@@ -43,9 +43,11 @@ companion_overrides=("${out[@]}")
 
 set -x
 this_repo_dir="$PWD"
+this_repo_dir_parent="$(dirname "$this_repo_dir")"
 this_repo="$(basename "$this_repo_dir")"
-companions_dir="$this_repo_dir/companions"
-extra_dependencies_dir="$this_repo_dir/extra_dependencies"
+dependents_dir="$this_repo_dir_parent/dependents"
+companions_dir="$this_repo_dir_parent/companions"
+extra_dependencies_dir="$this_repo_dir_parent/extra_dependencies"
 github_api="https://api.github.com"
 github_graphql_api="https://api.github.com/graphql"
 org_github_prefix="https://github.com/$org"
@@ -630,7 +632,7 @@ main() {
       done
     fi
 
-    dependent_repo_dir="$this_repo_dir/$dependent_repo"
+    dependent_repo_dir="$dependents_dir/$dependent_repo"
     # shellcheck disable=SC2068
     git clone \
       ${dependent_clone_options[@]} \
