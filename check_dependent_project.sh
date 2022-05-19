@@ -497,6 +497,14 @@ main() {
   git config --global user.email '<>'
   git config --global pull.rebase false
 
+  # TODO remove this after
+  # 1. https://github.com/bkchr/diener/issues/15 is fixed (related to https://github.com/bkchr/diener/pull/16)
+  # 2. A new version of diener is released
+  # 3. diener is updated in ci-linux (https://github.com/paritytech/scripts/blob/eb1f6a267100023e83b49c2fe6ca7d85907a294f/dockerfiles/ci-linux/Dockerfile#L32)
+  mkdir -p "$HOME/.cargo/bin"
+  cargo install --git https://github.com/paritytech/diener --branch all-packages
+  export PATH="$HOME/.cargo/bin:$PATH"
+
   # process_pr_description calls itself for each companion in the description on
   # each detected companion PR, effectively considering all companion references
   # on all PRs
