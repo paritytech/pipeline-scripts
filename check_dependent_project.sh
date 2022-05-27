@@ -394,6 +394,12 @@ patch_and_check_dependent() {
 
   pushd "$dependent_repo_dir" >/dev/null
 
+  # Detect the companions which are a dependency of dependent; e.g. when
+  # we're running this script in Substrate and the dependent for this job is
+  # Cumulus, a Polkadot companion is a dependency of the dependent since
+  # Cumulus depends on Polkadot
+  detect_dependencies_among_companions
+
   if [ "${has_overridden_dependent_ref:-}" ]; then
     echo "Skipping extra_dependencies ($extra_dependencies) as the dependent repository's ref has been overridden"
   else
@@ -408,6 +414,23 @@ patch_and_check_dependent() {
     # this script gets to run for the last time (after lockfile updates and before
     # merge).
     for extra_dependency in $extra_dependencies; do
+      if [ "$extra_dependency" = "$this_repo" ]; then
+        echo "Skipping extra dependency $extra_dependency because this branch (also $this_repo) will be patched into the dependent $dependent"
+        continue
+      fi
+
+      # check if a repository specified in $extra_dependencies but is also
+      # specified as a companion (e.g. a Substrate PR whose
+      # check-dependent-cumulus job specifies `EXTRA_DEPENDENCIES: polkadot` but
+      # also a `polkadot companion: something` in its description); in that case
+      # skip this step because that repository will be patched later
+      for companion_dependency in "${dependencies_among_companions[@]}"; do
+        if [ "$companion_dependency" = "$extra_dependency" ]; then
+          echo "Skipping extra dependency $extra_dependency because it was specified as a companion"
+          continue 2
+        fi
+      done
+
       echo "Cloning extra dependency $extra_dependency to patch its default branch into $this_repo and $dependent"
       git clone \
         --depth=1 \
@@ -436,42 +459,33 @@ patch_and_check_dependent() {
     --crates-to-patch "$this_repo_dir" \
     --path Cargo.toml
 
-  # The patching procedure below only makes sense if a companion PR was
-  # specified for the dependent being targeted by this check, because then
-  # processbot will be able to push the lockfile updates to that PR while taking
-  # into account dependencies among companions; without a companion PR for the
-  # dependent, it's not sane to perform the following workaround because the
-  # dependent's lockfile would not be updated at the end of the merge chain due
-  # to the lack of a companion PR (which those lockfile updates would be pushed
-  # to), thus leaving the dependent's repository desynchronized.
-  # See https://github.com/paritytech/substrate/pull/11280#issue-1214392074 for
-  # a related workaround for that situation.
-  for companion in "${companions[@]}"; do
-    if [ "$companion" = "$dependent" ]; then
-      # Detect the companions which are a dependency of dependent; e.g. when
-      # we're running this script in Substrate and the dependent for this job is
-      # Cumulus, a Polkadot companion is a dependency of the dependent since
-      # Cumulus depends on Polkadot
-      detect_dependencies_among_companions
+  # The next step naturally only makes sense if a companion PR was specified for
+  # the dependent being targeted by this check, because then processbot will be
+  # able to push the lockfile updates to that PR while taking into account
+  # dependencies among companions; without a companion PR for the dependent,
+  # the dependent's lockfile would not be updated at the end of the merge chain
+  # due to the lack of a companion PR (which those lockfile updates would be
+  # pushed to), thus leaving the dependent's repository desynchronized.
+  # The above problem can be worked around by specifying a dependency in
+  # $EXTRA_DEPENDENCIES which takes care of using a dependency's master branch
+  # in place of a companion in case a companion for that dependency was not
+  # specified, as described in
+  # https://github.com/paritytech/substrate/pull/11280#issue-1214392074.
 
-      # Each companion dependency is also patched into the dependent so that the
-      # dependency graph becomes how it should end up after all PRs are merged
-      for comp in "${dependencies_among_companions[@]}"; do
-        echo "Patching $this_repo into the $comp companion, which is a dependency of $dependent, assuming $comp also depends on $this_repo. Reasoning: if a companion was referenced in this PR or a companion of this PR, then it probably has a dependency on this PR, since PR descriptions are processed starting from the dependencies."
-        diener patch \
-          --target "$org_github_prefix/$this_repo" \
-          --crates-to-patch "$this_repo_dir" \
-          --path "$companions_dir/$comp/Cargo.toml"
+  # Each companion dependency is also patched into the dependent so that the
+  # dependency graph becomes how it should end up after all PRs are merged.
+  for comp in "${dependencies_among_companions[@]}"; do
+    echo "Patching $this_repo into the $comp companion, which is a dependency of $dependent, assuming $comp also depends on $this_repo. Reasoning: if a companion was referenced in this PR or a companion of this PR, then it probably has a dependency on this PR, since PR descriptions are processed starting from the dependencies."
+    diener patch \
+      --target "$org_github_prefix/$this_repo" \
+      --crates-to-patch "$this_repo_dir" \
+      --path "$companions_dir/$comp/Cargo.toml"
 
-        echo "Patching $comp companion into $dependent"
-        diener patch \
-          --target "$org_github_prefix/$comp" \
-          --crates-to-patch "$companions_dir/$comp" \
-          --path Cargo.toml
-      done
-
-      break
-    fi
+    echo "Patching $comp companion into $dependent"
+    diener patch \
+      --target "$org_github_prefix/$comp" \
+      --crates-to-patch "$companions_dir/$comp" \
+      --path Cargo.toml
   done
 
   # Match the crates *AFTER* patching for verifying that dependencies which are
