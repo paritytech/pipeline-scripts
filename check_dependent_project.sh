@@ -373,7 +373,7 @@ patch_and_check_dependent() {
         --crates-to-patch "$extra_dependencies_dir/$extra_dependency" \
         --path "$this_repo_dir/Cargo.toml"
 
-      echo "Patching extra dependency $extra_dependency into $dependent"
+      echo "Patching extra dependency $extra_dependency into $dependent_repo_dir"
       diener patch \
         --target "$org_github_prefix/$extra_dependency" \
         --crates-to-patch "$extra_dependencies_dir/$extra_dependency" \
