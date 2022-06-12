@@ -349,6 +349,11 @@ patch_and_check_dependent() {
         continue
       fi
 
+      if [ "$extra_dependency" = "$dependent_repo" ]; then
+        echo "Skipping extra dependency $extra_dependency because it's being targetted as a dependent for this script"
+        continue
+      fi
+
       # check if a repository specified in $extra_dependencies but is also
       # specified as a companion (e.g. a Substrate PR whose
       # check-dependent-cumulus job specifies `EXTRA_DEPENDENCIES: polkadot` but
@@ -405,6 +410,10 @@ patch_and_check_dependent() {
   # Each companion dependency is also patched into the dependent so that the
   # dependency graph becomes how it should end up after all PRs are merged.
   for companion in "${companions[@]}"; do
+    if [ "$companion" = "$dependent_repo" ]; then
+      continue
+    fi
+
     echo "Patching $this_repo into the $comp companion, which could be a dependency of $dependent, assuming that $companion also depends on $this_repo. Reasoning: if a companion was referenced in this PR or a companion of this PR, then it probably has a dependency on this PR, since PR descriptions are processed starting from the dependencies."
     diener patch \
       --target "$org_github_prefix/$this_repo" \
