@@ -168,70 +168,6 @@ match_dependent_crates() {
   fi
 }
 
-detect_dependencies_among_companions() {
-  dependencies_among_companions=()
-
-  # workaround for early exits not being detected in command substitution
-  # https://unix.stackexchange.com/questions/541969/nested-command-substitution-does-not-stop-a-script-on-a-failure-even-if-e-and-s
-  local last_line
-
-  # output will be consumed in the format:
-  #   crate
-  #   source
-  #   crate
-  #   ...
-  local next="crate"
-  while IFS= read -r line; do
-    last_line="$line"
-    case "$next" in
-      crate)
-        next="source"
-        crate="$line"
-      ;;
-      source)
-        next="crate"
-
-        for comp in "${companions[@]}"; do
-          local companion_crate_source="$org_crates_prefix/$comp"
-          if [[
-            # git+https://github.com/$org/$repo
-            "$line" == "$companion_crate_source" ||
-            # git+https://github.com/$org/$repo?branch=master
-            "${line:0:$(( ${#companion_crate_source} + 1 ))}" == "${companion_crate_source}?"
-          ]]; then
-            # prevent duplicates in dependencies_among_companions
-            local found
-            for dep_comp in "${dependencies_among_companions[@]}"; do
-              if [ "$dep_comp" == "$comp" ]; then
-                found=true
-                break
-              fi
-            done
-            if [ "${found:-}" ]; then
-              unset found
-            else
-              dependencies_among_companions+=("$comp")
-            fi
-          fi
-        done
-      ;;
-      *)
-        die "ERROR: Unknown state $next"
-      ;;
-    esac
-  done < <(cargo metadata --quiet --format-version=1 | jq -r '
-    . as $in |
-    paths(select(type=="string")) |
-    select(.[-1]=="source") as $source_path |
-    del($source_path[-1]) as $path |
-    [$in | getpath($path + ["name"]), getpath($path + ["source"])] |
-    .[]
-  ')
-  if [ -z "${last_line+_}" ]; then
-    die "No lines were read for cargo metadata of $PWD (some error probably occurred)"
-  fi
-}
-
 companions=()
 process_pr_description_line() {
   local companion_expr="$1"
@@ -394,12 +330,6 @@ patch_and_check_dependent() {
 
   pushd "$dependent_repo_dir" >/dev/null
 
-  # Detect the companions which are a dependency of dependent; e.g. when
-  # we're running this script in Substrate and the dependent for this job is
-  # Cumulus, a Polkadot companion is a dependency of the dependent since
-  # Cumulus depends on Polkadot
-  detect_dependencies_among_companions
-
   if [ "${has_overridden_dependent_ref:-}" ]; then
     echo "Skipping extra_dependencies ($extra_dependencies) as the dependent repository's ref has been overridden"
   else
@@ -419,13 +349,18 @@ patch_and_check_dependent() {
         continue
       fi
 
+      if [ "$extra_dependency" = "$dependent_repo" ]; then
+        echo "Skipping extra dependency $extra_dependency because it's being targetted as a dependent for this script"
+        continue
+      fi
+
       # check if a repository specified in $extra_dependencies but is also
       # specified as a companion (e.g. a Substrate PR whose
       # check-dependent-cumulus job specifies `EXTRA_DEPENDENCIES: polkadot` but
       # also a `polkadot companion: something` in its description); in that case
       # skip this step because that repository will be patched later
-      for companion_dependency in "${dependencies_among_companions[@]}"; do
-        if [ "$companion_dependency" = "$extra_dependency" ]; then
+      for companion in "${companions[@]}"; do
+        if [ "$companion" = "$extra_dependency" ]; then
           echo "Skipping extra dependency $extra_dependency because it was specified as a companion"
           continue 2
         fi
@@ -443,7 +378,7 @@ patch_and_check_dependent() {
         --crates-to-patch "$extra_dependencies_dir/$extra_dependency" \
         --path "$this_repo_dir/Cargo.toml"
 
-      echo "Patching extra dependency $extra_dependency into $dependent"
+      echo "Patching extra dependency $extra_dependency into $dependent_repo_dir"
       diener patch \
         --target "$org_github_prefix/$extra_dependency" \
         --crates-to-patch "$extra_dependencies_dir/$extra_dependency" \
@@ -474,8 +409,12 @@ patch_and_check_dependent() {
 
   # Each companion dependency is also patched into the dependent so that the
   # dependency graph becomes how it should end up after all PRs are merged.
-  for comp in "${dependencies_among_companions[@]}"; do
-    echo "Patching $this_repo into the $comp companion, which is a dependency of $dependent, assuming $comp also depends on $this_repo. Reasoning: if a companion was referenced in this PR or a companion of this PR, then it probably has a dependency on this PR, since PR descriptions are processed starting from the dependencies."
+  for companion in "${companions[@]}"; do
+    if [ "$companion" = "$dependent_repo" ]; then
+      continue
+    fi
+
+    echo "Patching $this_repo into the $comp companion, which could be a dependency of $dependent, assuming that $companion also depends on $this_repo. Reasoning: if a companion was referenced in this PR or a companion of this PR, then it probably has a dependency on this PR, since PR descriptions are processed starting from the dependencies."
     diener patch \
       --target "$org_github_prefix/$this_repo" \
       --crates-to-patch "$this_repo_dir" \
