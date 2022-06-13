@@ -409,8 +409,8 @@ patch_and_check_dependent() {
 
   # Each companion dependency is also patched into the dependent so that the
   # dependency graph becomes how it should end up after all PRs are merged.
-  for companion in "${companions[@]}"; do
-    if [ "$companion" = "$dependent_repo" ]; then
+  for comp in "${companions[@]}"; do
+    if [ "$comp" = "$dependent_repo" ]; then
       continue
     fi
 
