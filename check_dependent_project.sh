@@ -414,7 +414,7 @@ patch_and_check_dependent() {
       continue
     fi
 
-    echo "Patching $this_repo into the $comp companion, which could be a dependency of $dependent, assuming that $companion also depends on $this_repo. Reasoning: if a companion was referenced in this PR or a companion of this PR, then it probably has a dependency on this PR, since PR descriptions are processed starting from the dependencies."
+    echo "Patching $this_repo into the $comp companion, which could be a dependency of $dependent, assuming that $comp also depends on $this_repo. Reasoning: if a companion was referenced in this PR or a companion of this PR, then it probably has a dependency on this PR, since PR descriptions are processed starting from the dependencies."
     diener patch \
       --target "$org_github_prefix/$this_repo" \
       --crates-to-patch "$this_repo_dir" \
