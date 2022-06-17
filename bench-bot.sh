@@ -35,9 +35,7 @@ bench_pallet() {
   local kind="$1"
   local chain="$2"
   local pallet="$3"
-
-  # translates e.g. "pallet_foo::bar" to "pallet_foo_bar"
-  local output_file="${pallet//::/_}"
+  local pallet_prefix="pallet_"
 
   local args
   case "$repository" in
@@ -52,8 +50,12 @@ bench_pallet() {
 
       case "$kind" in
         runtime)
-          # replaces all the '_' in the pallet name with '-'
-          local pallet_folder="${pallet//_/-}"
+          local pallet_folder
+          if [ "${pallet:0:${#pallet_prefix}}" == "$pallet_prefix" ]; then
+            pallet_folder="${pallet:${#pallet_prefix}}"
+          else
+            pallet_folder="$pallet"
+          fi
           args+=(
             "--output=./frame/${pallet_folder}/src/weights.rs"
             --template=./.maintain/frame-weight-template.hbs
@@ -72,10 +74,18 @@ bench_pallet() {
         "--chain=${chain}"
       )
 
-      if ! [[ "$chain" =~ ^(.*)-dev$  ]]; then
+      local chain_directory
+      if [ "$chain" == dev ]; then
+        chain_directory=polkadot
+      elif [[ "$chain" =~ ^(.*)-dev$  ]]; then
+        chain_directory="${BASH_REMATCH[1]}"
+      else
         die "Could not infer weights directory from $chain"
       fi
-      local weights_dir="./runtime/${BASH_REMATCH[1]}/src/weights"
+      local weights_dir="./runtime/${chain_directory}/src/weights"
+
+      # translates e.g. "pallet_foo::bar" to "pallet_foo_bar"
+      local output_file="${pallet//::/_}"
 
       case "$kind" in
         runtime)
