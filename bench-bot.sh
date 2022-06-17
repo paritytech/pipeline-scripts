@@ -142,6 +142,10 @@ main() {
   # Reset the branch to how it was on GitHub when the bot command was issued
   git reset --hard "$GH_HEAD_SHA"
 
+  # https://github.com/paritytech/substrate/pull/10700
+  # https://github.com/paritytech/substrate/blob/b511370572ac5689044779584a354a3d4ede1840/utils/wasm-builder/src/wasm_project.rs#L206
+  export WASM_BUILD_WORKSPACE_HINT="$PWD"
+
   set -x
   # Runs the command to generate the weights
   process_args "$@"
