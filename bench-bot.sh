@@ -49,7 +49,7 @@ bench_pallet() {
       )
 
       case "$kind" in
-        runtime)
+        pallet)
           local pallet_folder
           if [ "${pallet:0:${#pallet_prefix}}" == "$pallet_prefix" ]; then
             pallet_folder="${pallet:${#pallet_prefix}}"
@@ -118,7 +118,7 @@ process_args() {
   shift
 
   case "$subcommand" in
-    runtime|xcm)
+    runtime|pallet|xcm)
       bench_pallet "$subcommand" "$@"
     ;;
     *)
