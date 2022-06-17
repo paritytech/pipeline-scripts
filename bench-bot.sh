@@ -37,6 +37,13 @@ bench_pallet() {
   local pallet="$3"
   local pallet_prefix="pallet_"
 
+  local pallet_id
+  if [ "${pallet:0:${#pallet_prefix}}" == "$pallet_prefix" ]; then
+    pallet_id="$pallet"
+  else
+    pallet_id="${pallet_prefix}${pallet}"
+  fi
+
   local args
   case "$repository" in
     substrate)
@@ -44,7 +51,7 @@ bench_pallet() {
         --features=runtime-benchmarks
         --manifest-path=bin/node/cli/Cargo.toml
         "${bench_pallet_common_args[@]}"
-        "--pallet=${pallet}"
+        "--pallet=${pallet_id}"
         "--chain=${chain}"
       )
 
@@ -70,7 +77,7 @@ bench_pallet() {
       args=(
         --features=runtime-benchmarks
         "${bench_pallet_common_args[@]}"
-        "--pallet=${pallet}"
+        "--pallet=${pallet_id}"
         "--chain=${chain}"
       )
 
