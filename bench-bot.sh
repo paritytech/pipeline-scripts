@@ -9,16 +9,12 @@
 # be ran only on protected pipelines
 
 set -eu -o pipefail
+shopt -s inherit_errexit
+
+. "$(dirname "${BASH_SOURCE[0]}")/utils.sh"
 
 cargo_run_benchmarks="cargo +nightly run --quiet --profile=production"
 repository="$(basename "$PWD")"
-
-die() {
-  if [ "${1:-}" ]; then
-    >&2 echo "$1"
-  fi
-  exit 1
-}
 
 bench_pallet_common_args=(
   --
@@ -159,9 +155,16 @@ main() {
   # Commits the weights and pushes it
   git add .
   git commit -m "$COMMIT_MESSAGE"
+
+  # Recreate the "github" remote; this is warranted since the same repository
+  # might be reused by a GitLab runner, therefore the remote might already exist
+  # from a previous run
+  &>/dev/null try git remote remove github
   git remote add \
     github \
     "https://token:${GITHUB_TOKEN}@github.com/${GH_CONTRIBUTOR}/${GH_CONTRIBUTOR_REPO}.git"
+
+  # Push the weights
   git push github "HEAD:${GH_CONTRIBUTOR_BRANCH}"
 }
 

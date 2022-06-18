@@ -70,3 +70,9 @@ get_arg() {
     unset out
   fi
 }
+
+try() {
+  set +e
+  $@
+  set -e
+}
