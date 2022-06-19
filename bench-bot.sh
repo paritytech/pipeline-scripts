@@ -158,14 +158,19 @@ main() {
 
   # Recreate the "github" remote; this is warranted since the same repository
   # might be reused by a GitLab runner, therefore the remote might already exist
-  # from a previous run
+  # from a previous run in case it was not cleaned up properly for some reason
   &>/dev/null try git remote remove github
   git remote add \
     github \
     "https://token:${GITHUB_TOKEN}@github.com/${GH_CONTRIBUTOR}/${GH_CONTRIBUTOR_REPO}.git"
 
-  # Push the weights
-  git push github "HEAD:${GH_CONTRIBUTOR_BRANCH}"
+  # Push the weights; shouldn't make the script fail because we'll clean up the
+  # github remote after this
+  try git push github "HEAD:${GH_CONTRIBUTOR_BRANCH}"
+
+  # Clean up the "github" remote since it contains the $GITHUB_TOKEN secret,
+  # which is only available in protected pipelines on GitLab
+  git remote remove github
 }
 
 main "$@"
