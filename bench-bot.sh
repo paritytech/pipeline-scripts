@@ -15,9 +15,6 @@ shopt -s inherit_errexit
 
 # rustup is not currently in $PATH for the GitLab runner
 rustup="${CARGO_HOME:+${CARGO_HOME}/bin/}rustup"
-if [ ! -x "$rustup" ]; then
-  rustup="rustup"
-fi
 
 cargo_run_benchmarks="cargo +nightly run --quiet --profile=production"
 repository="$(basename "$PWD")"
