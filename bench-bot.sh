@@ -138,6 +138,32 @@ main() {
   # Reset the branch to how it was on GitHub when the bot command was issued
   git reset --hard "$GH_HEAD_SHA"
 
+  # Remove the "github" remote since the same repository might be reused by a
+  # GitLab runner, therefore the remote might already exist from a previous run
+  # in case it was not cleaned up properly for some reason
+  &>/dev/null try git remote remove github
+
+  # Clean up the "github" remote at the end since it contains the $GITHUB_TOKEN
+  # secret, which is only available for protected pipelines on GitLab
+  cleanup() {
+    exit_code=$?
+    try git remote remove github
+    exit $exit_code
+  }
+  trap cleanup EXIT
+
+  if [[
+    "${UPSTREAM_MERGE:-}" != "n" &&
+    "${GH_OWNER_BRANCH:-}"
+  ]]; then
+    echo "Merging $GH_OWNER/$GH_OWNER_REPO#$GH_OWNER_BRANCH into $GH_CONTRIBUTOR_BRANCH"
+    git remote add \
+      github \
+      "https://token:${GITHUB_TOKEN}@github.com/${GH_OWNER}/${GH_OWNER_REPO}.git"
+    git pull github "$GH_OWNER_BRANCH"
+    git remote remove github
+  fi
+
   # https://github.com/paritytech/substrate/pull/10700
   # https://github.com/paritytech/substrate/blob/b511370572ac5689044779584a354a3d4ede1840/utils/wasm-builder/src/wasm_project.rs#L206
   export WASM_BUILD_WORKSPACE_HINT="$PWD"
@@ -156,21 +182,11 @@ main() {
   git add .
   git commit -m "$COMMIT_MESSAGE"
 
-  # Recreate the "github" remote; this is warranted since the same repository
-  # might be reused by a GitLab runner, therefore the remote might already exist
-  # from a previous run in case it was not cleaned up properly for some reason
-  &>/dev/null try git remote remove github
+  # Push the results to the target branch
   git remote add \
     github \
     "https://token:${GITHUB_TOKEN}@github.com/${GH_CONTRIBUTOR}/${GH_CONTRIBUTOR_REPO}.git"
-
-  # Push the weights; shouldn't make the script fail because we'll clean up the
-  # github remote after this
-  try git push github "HEAD:${GH_CONTRIBUTOR_BRANCH}"
-
-  # Clean up the "github" remote since it contains the $GITHUB_TOKEN secret,
-  # which is only available in protected pipelines on GitLab
-  git remote remove github
+  git push github "HEAD:${GH_CONTRIBUTOR_BRANCH}"
 }
 
 main "$@"
