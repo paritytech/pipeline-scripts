@@ -31,36 +31,37 @@ bench_pallet() {
   local kind="$1"
   local chain="$2"
   local pallet="$3"
-  local pallet_prefix="pallet_"
-
-  local pallet_id
-  if [ "${pallet:0:${#pallet_prefix}}" == "$pallet_prefix" ]; then
-    pallet_id="$pallet"
-  else
-    pallet_id="${pallet_prefix}${pallet}"
-  fi
 
   local args
   case "$repository" in
     substrate)
+      local pallet_prefix="pallet_"
+
+      local pallet_id
+      if [ "${pallet:0:${#pallet_prefix}}" == "$pallet_prefix" ]; then
+        pallet_id="$pallet"
+      else
+        pallet_id="${pallet_prefix}${pallet}"
+      fi
+
       args=(
         --features=runtime-benchmarks
         --manifest-path=bin/node/cli/Cargo.toml
         "${bench_pallet_common_args[@]}"
-        "--pallet=${pallet_id}"
-        "--chain=${chain}"
+        "--pallet=$pallet_id"
+        "--chain=$chain"
       )
 
       case "$kind" in
         pallet)
-          local pallet_folder
+          local output_folder
           if [ "${pallet:0:${#pallet_prefix}}" == "$pallet_prefix" ]; then
-            pallet_folder="${pallet:${#pallet_prefix}}"
+            output_folder="${pallet:${#pallet_prefix}}"
           else
-            pallet_folder="$pallet"
+            output_folder="$pallet"
           fi
           args+=(
-            "--output=./frame/${pallet_folder}/src/weights.rs"
+            "--output=./frame/${output_folder}/src/weights.rs"
             --template=./.maintain/frame-weight-template.hbs
           )
         ;;
@@ -73,8 +74,8 @@ bench_pallet() {
       args=(
         --features=runtime-benchmarks
         "${bench_pallet_common_args[@]}"
-        "--pallet=${pallet_id}"
-        "--chain=${chain}"
+        "--pallet=$pallet"
+        "--chain=$chain"
       )
 
       local chain_directory
