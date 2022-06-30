@@ -13,6 +13,12 @@ shopt -s inherit_errexit
 
 . "$(dirname "${BASH_SOURCE[0]}")/utils.sh"
 
+# rustup is not currently in $PATH for the GitLab runner
+rustup="${CARGO_HOME:+${CARGO_HOME}/bin/}rustup"
+if [ ! -x "$rustup" ]; then
+  rustup="rustup"
+fi
+
 cargo_run_benchmarks="cargo +nightly run --quiet --profile=production"
 repository="$(basename "$PWD")"
 
@@ -139,7 +145,7 @@ main() {
   git reset --hard "$GH_HEAD_SHA"
 
   echo "Displaying Rust toolchain"
-  "${CARGO_HOME:+${CARGO_HOME}/bin/}rustup" show
+  "$rustup" show
 
   # Remove the "github" remote since the same repository might be reused by a
   # GitLab runner, therefore the remote might already exist from a previous run
