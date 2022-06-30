@@ -13,9 +13,6 @@ shopt -s inherit_errexit
 
 . "$(dirname "${BASH_SOURCE[0]}")/utils.sh"
 
-# set the executable path for the GitLab runner since rustup is not in $PATH
-rustup="${CARGO_HOME:-}/bin/rustup"
-
 cargo_run_benchmarks="cargo +nightly run --quiet --profile=production"
 repository="$(basename "$PWD")"
 
@@ -142,7 +139,6 @@ main() {
   git reset --hard "$GH_HEAD_SHA"
 
   set -x
-  "$rustup" show
   cargo --version
   rustc --version
   cargo +nightly --version
