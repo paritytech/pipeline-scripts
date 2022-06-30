@@ -139,7 +139,7 @@ main() {
   git reset --hard "$GH_HEAD_SHA"
 
   echo "Displaying Rust toolchain"
-  rustup show
+  "${RUSTUP_HOME:+${RUSTUP_HOME}/}rustup" show
 
   # Remove the "github" remote since the same repository might be reused by a
   # GitLab runner, therefore the remote might already exist from a previous run
