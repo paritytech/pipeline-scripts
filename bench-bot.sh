@@ -154,7 +154,7 @@ main() {
 
   if [[
     "${UPSTREAM_MERGE:-}" != "n" &&
-    "${GH_OWNER_BRANCH:-}"
+    ("${GH_OWNER_BRANCH:-}")
   ]]; then
     echo "Merging $GH_OWNER/$GH_OWNER_REPO#$GH_OWNER_BRANCH into $GH_CONTRIBUTOR_BRANCH"
     git remote add \
