@@ -138,6 +138,9 @@ main() {
   # Reset the branch to how it was on GitHub when the bot command was issued
   git reset --hard "$GH_HEAD_SHA"
 
+  echo "Displaying Rust toolchain"
+  rustup show
+
   # Remove the "github" remote since the same repository might be reused by a
   # GitLab runner, therefore the remote might already exist from a previous run
   # in case it was not cleaned up properly for some reason
