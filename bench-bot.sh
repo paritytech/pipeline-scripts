@@ -113,8 +113,8 @@ bench_pallet() {
       args=(
         --features=runtime-benchmarks
         "${bench_pallet_common_args[@]}"
-        "--pallet=$pallet"
-        "--chain=${chain}-dev"
+        --pallet="$pallet"
+        --chain="${chain}-dev"
       )
 
       case "$kind" in
@@ -122,7 +122,7 @@ bench_pallet() {
           args+=(
             --json-file="${ARTIFACTS_DIR}/bench.json"
             --header=./file_header.txt
-            "--output=./parachains/runtimes/assets/${chain}/src/weights"
+            --output="./parachains/runtimes/assets/${chain}/src/weights"
           )
         ;;
         *)
