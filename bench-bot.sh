@@ -120,7 +120,7 @@ bench_pallet() {
       case "$kind" in
         pallet)
           args+=(
-            --json
+            --json-file="${ARTIFACTS_DIR}/bench.json"
             --header=./file_header.txt
             "--output=./parachains/runtimes/assets/${chain}/src/weights"
           )
