@@ -109,6 +109,27 @@ bench_pallet() {
         ;;
       esac
     ;;
+    cumulus)
+      args=(
+        --features=runtime-benchmarks
+        "${bench_pallet_common_args[@]}"
+        "--pallet=$pallet"
+        "--chain=${chain}-dev"
+      )
+
+      case "$kind" in
+        pallet)
+          args+=(
+            --json
+            --header=./file_header.txt
+            "--output=./parachains/runtimes/assets/${chain}/src/weights"
+          )
+        ;;
+        *)
+          die "Kind $kind is not supported for $repository in bench_pallet"
+        ;;
+      esac
+    ;;
     *)
       die "Repository $repository is not supported in bench_pallet"
     ;;
