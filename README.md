@@ -173,6 +173,7 @@ and there will be a lot of rust code compiled
   * set default rustup
   * install toolchain nightly
   * add wasm target
+  * install cmake
 
 All those requirements are saved in an ansible role called `rustup`
 TODO: add link to rustup role once the PR is merged
