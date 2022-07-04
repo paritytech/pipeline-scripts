@@ -29,7 +29,7 @@ bench_pallet_common_args=(
 )
 bench_pallet() {
   local kind="$1"
-  local chain="$2"
+  local runtime="$2"
   local pallet="$3"
 
   local args
@@ -48,8 +48,8 @@ bench_pallet() {
         --features=runtime-benchmarks
         --manifest-path=bin/node/cli/Cargo.toml
         "${bench_pallet_common_args[@]}"
-        "--pallet=$pallet_id"
-        "--chain=$chain"
+        --pallet="$pallet_id"
+        --chain="$runtime"
       )
 
       case "$kind" in
@@ -61,7 +61,7 @@ bench_pallet() {
             output_folder="$pallet"
           fi
           args+=(
-            "--output=./frame/${output_folder}/src/weights.rs"
+            --output="./frame/${output_folder}/src/weights.rs"
             --template=./.maintain/frame-weight-template.hbs
           )
         ;;
@@ -74,19 +74,19 @@ bench_pallet() {
       args=(
         --features=runtime-benchmarks
         "${bench_pallet_common_args[@]}"
-        "--pallet=$pallet"
-        "--chain=$chain"
+        --pallet="$pallet"
+        --chain="$runtime"
       )
 
-      local chain_directory
-      if [ "$chain" == dev ]; then
-        chain_directory=polkadot
-      elif [[ "$chain" =~ ^(.*)-dev$  ]]; then
-        chain_directory="${BASH_REMATCH[1]}"
+      local runtime_dir
+      if [ "$runtime" == dev ]; then
+        runtime_dir=polkadot
+      elif [[ "$runtime" =~ ^(.*)-dev$  ]]; then
+        runtime_dir="${BASH_REMATCH[1]}"
       else
-        die "Could not infer weights directory from $chain"
+        die "Could not infer weights directory from $runtime"
       fi
-      local weights_dir="./runtime/${chain_directory}/src/weights"
+      local weights_dir="./runtime/${runtime_dir}/src/weights"
 
       # translates e.g. "pallet_foo::bar" to "pallet_foo_bar"
       local output_file="${pallet//::/_}"
@@ -95,13 +95,13 @@ bench_pallet() {
         runtime)
           args+=(
             --header=./file_header.txt
-            "--output=${weights_dir}/${output_file}.rs"
+            --output="${weights_dir}/${output_file}.rs"
           )
         ;;
         xcm)
           args+=(
             --template=./xcm/pallet-xcm-benchmarks/template.hbs
-            "--output=${weights_dir}/xcm/${output_file}.rs"
+            --output="${weights_dir}/xcm/${output_file}.rs"
           )
         ;;
         *)
@@ -114,7 +114,7 @@ bench_pallet() {
         --features=runtime-benchmarks
         "${bench_pallet_common_args[@]}"
         --pallet="$pallet"
-        --chain="${chain}-dev"
+        --chain="${runtime}-dev"
       )
 
       case "$kind" in
@@ -122,7 +122,7 @@ bench_pallet() {
           args+=(
             --json-file="${ARTIFACTS_DIR}/bench.json"
             --header=./file_header.txt
-            --output="./parachains/runtimes/assets/${chain}/src/weights"
+            --output="./parachains/runtimes/assets/${runtime}/src/weights"
           )
         ;;
         *)
