@@ -148,15 +148,11 @@ The check is currently limited to `cargo check` but optimally it should
 [entail the whole CI pipeline of `$dependent_repo`](https://github.com/paritytech/ci_cd/issues/234).
 
 # bench-bot <a name="bench_bot"></a>
-  - Bot that runs benchmark commands for users .
-  - Uses gitlab-runner to run the jobs.
-  - Users posts a comment on a PR in substrate repo  with the command that needs to run and the bot runs it.
-
-  E. G. `/cmd queue -c bench-bot $ pallet dev pallet_balances`
+The script through which command-bot runs benchmarks. See https://github.com/paritytech/command-bot#pull-request-command-queue for its usage.
 
 ## Infrastrcture <a name="#bench_bot_infra"></a>
 
-This bot runs on [bm3 machine](https://gitlab.parity.io/parity/devops/-/blob/master/inventory.yaml#L485),
+This bot runs on [bm3 machine](https://gitlab.parity.io/parity/devops/-/blob/462e85a44e9c84064a7f91d1402e499e27e07991/inventory.yaml#L485),
 currently maintained by CI/CD team.
 
 ### Configuration requirements:
@@ -167,8 +163,8 @@ Config requirements:
   * gitlab_runner_additional_tags: bench-bot
   * os: ubuntu20
   * provider: ovh
-  * HOME for `gitlab-runner` needs to  be in `/home` because this is monunted on a disk witk more space then the root partition
-and there will be a lot of rust code compiled
+  * `$HOME` for `gitlab-runner` needs to  be within `/home` because it is mounted on a disk with more space than the root partition;
+the projects' release artifacts require a lot of disk space.
   * install rustup for gitlab-runner user
   * set default rustup
   * install toolchain nightly
@@ -180,7 +176,7 @@ TODO: add link to rustup role once the PR is merged
 
 ### Ansible
 Because there is only one host running code for this bot, one needs to create
-a test VM and add it to inventory everywhere `bm3` is mentiond.
+a test VM and add it to inventory everywhere `bm3` is mentioned.
 
 ```
         test-bench-bot:
@@ -189,7 +185,7 @@ a test VM and add it to inventory everywhere `bm3` is mentiond.
           provider: ovh
           gitlab_runner_executor: shell
           gitlab_runner_additional_tags: bench-bot
-          ### required for rustup ransible role
+          ### required for rustup ansible role
           # Install rustup, and rust toolchain as defined value.
           rustup_user: gitlab-runner
           # Adds {HOME/.cargo/bin} to user's PATH
@@ -200,7 +196,7 @@ a test VM and add it to inventory everywhere `bm3` is mentiond.
 
 **When creating the VM helps a lot if you include your ssh public key**
 ```
-/home/radu/.ssh/id_rsa_yubikey.pub
+/home/$USER/.ssh/id_rsa_yubikey.pub
 ```
 
 Test the ansible role from `parity/devops`
@@ -210,9 +206,10 @@ ansible-playbook ansible/gitlab-runner.yaml  -l test-bench-bot -u radupopa2010  
 
 ### Test
 
-In order not to disrupt the service, JP created a test command that uses gitlab tag `test-bench-bot`
+To avoid disrupting the production service while testing, a `test-bench-bot` configuration can be used, 
+which uses the `test-bench-bot` tag instead of `bench-bot`. It can be tested as:
 
-1. Fisrt create a dummy PR in substrate repo like [this one](https://github.com/paritytech/substrate/pull/11566)
+1. First create a dummy PR in substrate repo like [this one](https://github.com/paritytech/substrate/pull/11566)
 2. Add a comment `/cmd queue -c test-bench-bot $ pallet dev pallet_balances`
-3. Wait a bit and check for a commnet from the bot with the job that started
+3. Wait a bit and check for a comment from the bot with the job that started
 
