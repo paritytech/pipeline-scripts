@@ -161,6 +161,7 @@ main() {
   git reset --hard "$GH_HEAD_SHA"
 
   set -x
+  2>/dev/null lshw -short -sanitize
   cargo --version
   rustc --version
   cargo +nightly --version
