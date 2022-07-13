@@ -12,6 +12,7 @@ set -eu -o pipefail
 shopt -s inherit_errexit
 
 . "$(dirname "${BASH_SOURCE[0]}")/utils.sh"
+. "$(dirname "${BASH_SOURCE[0]}")/cmd_runner.sh"
 
 cargo_run_benchmarks="cargo +nightly run --quiet --profile=production"
 repository="$(basename "$PWD")"
@@ -153,31 +154,20 @@ process_args() {
 }
 
 main() {
-  # set the Git user, otherwise Git commands will fail
-  git config --global user.name command-bot
-  git config --global user.email "<>"
-
-  # Reset the branch to how it was on GitHub when the bot command was issued
-  git reset --hard "$GH_HEAD_SHA"
-
-  set -x
-  2>/dev/null lshw -short -sanitize
-  cargo --version
-  rustc --version
-  cargo +nightly --version
-  rustc +nightly --version
-  set +x
+  cmd_runner_setup
 
   # Remove the "github" remote since the same repository might be reused by a
   # GitLab runner, therefore the remote might already exist from a previous run
   # in case it was not cleaned up properly for some reason
-  &>/dev/null try git remote remove github
+  &>/dev/null git remote remove github || :
 
+  tmp_dirs=()
   # Clean up the "github" remote at the end since it contains the $GITHUB_TOKEN
   # secret, which is only available for protected pipelines on GitLab
   cleanup() {
     exit_code=$?
-    try git remote remove github
+    &>/dev/null git remote remove github || :
+    rm -rf "${tmp_dirs[@]}"
     exit $exit_code
   }
   trap cleanup EXIT
@@ -193,6 +183,9 @@ main() {
     git pull github "$GH_OWNER_BRANCH"
     git remote remove github
   fi
+
+  # shellcheck disable=SC2119
+  cmd_runner_apply_patches
 
   # https://github.com/paritytech/substrate/pull/10700
   # https://github.com/paritytech/substrate/blob/b511370572ac5689044779584a354a3d4ede1840/utils/wasm-builder/src/wasm_project.rs#L206

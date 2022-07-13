@@ -1,5 +1,11 @@
 #!/usr/bin/env bash
 
+if [ "${LOADED_UTILS_SH:-}" ]; then
+  return
+else
+  export LOADED_UTILS_SH=true
+fi
+
 die() {
   if [ "${1:-}" ]; then
     >&2 echo "$1"
@@ -69,10 +75,4 @@ get_arg() {
   else
     unset out
   fi
-}
-
-try() {
-  set +e
-  $@
-  set -e
 }
