@@ -31,6 +31,9 @@ cmd_runner_apply_patches() {
   get_arg optional --setup-dirs-cleanup "$@"
   local setup_cleanup="${out:-}"
 
+  local repositories_dir=".git/cmd-runner-patch"
+  tmp_dirs+=("$repositories_dir")
+
   while IFS= read -r line; do
     if ! [[ "$line" =~ ^PATCH_([^=]+)=(.*)$ ]]; then
       continue
@@ -39,9 +42,8 @@ cmd_runner_apply_patches() {
 
     local repository="${BASH_REMATCH[1]}"
     local branch="${BASH_REMATCH[2]}"
-    local repository_dir=".git/cmd-runner-patch/$repository"
+    local repository_dir="$repositories_dir/$repository"
 
-    mkdir -p .git/cmd-runner-patch
     rm -rf "$repository_dir"
     git clone \
       --depth 1 \
