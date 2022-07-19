@@ -134,8 +134,9 @@ bench_pallet() {
           )
         ;;
         xcm)
+          mkdir -p "./parachains/runtimes/$chain_type/$runtime/src/weights/xcm"
           args+=(
-            --template=./xcm/pallet-xcm-benchmarks/template.hbs
+            --template=./templates/xcm-bench-template.hbs
             --json-file="${ARTIFACTS_DIR}/bench.json"
             --header=./file_header.txt
             --output="./parachains/runtimes/$chain_type/$runtime/src/weights/xcm"
