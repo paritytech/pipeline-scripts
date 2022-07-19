@@ -31,11 +31,12 @@ bench_pallet_common_args=(
 bench_pallet() {
   local kind="$1"
   local runtime="$2"
-  local pallet="$3"
 
   local args
   case "$repository" in
     substrate)
+      local pallet="$3"
+
       local pallet_prefix="pallet_"
 
       local pallet_id
@@ -72,6 +73,8 @@ bench_pallet() {
       esac
     ;;
     polkadot)
+      local pallet="$3"
+
       args=(
         --features=runtime-benchmarks
         "${bench_pallet_common_args[@]}"
@@ -111,6 +114,9 @@ bench_pallet() {
       esac
     ;;
     cumulus)
+      local chain_type="$3"
+      local pallet="$4"
+
       args=(
         --bin=parachain-template-node
         --features=runtime-benchmarks
@@ -124,7 +130,15 @@ bench_pallet() {
           args+=(
             --json-file="${ARTIFACTS_DIR}/bench.json"
             --header=./file_header.txt
-            --output="./parachains/runtimes/assets/${runtime}/src/weights"
+            --output="./parachains/runtimes/$chain_type/$runtime/src/weights"
+          )
+        ;;
+        xcm)
+          args+=(
+            --template=./xcm/pallet-xcm-benchmarks/template.hbs
+            --json-file="${ARTIFACTS_DIR}/bench.json"
+            --header=./file_header.txt
+            --output="./parachains/runtimes/$chain_type/$runtime/src/weights/xcm"
           )
         ;;
         *)
