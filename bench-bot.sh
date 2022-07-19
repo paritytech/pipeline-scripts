@@ -118,7 +118,7 @@ bench_pallet() {
       local pallet="$4"
 
       args=(
-        --bin=parachain-template-node
+        --bin=polkadot-parachain
         --features=runtime-benchmarks
         "${bench_pallet_common_args[@]}"
         --pallet="$pallet"
