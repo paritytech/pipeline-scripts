@@ -112,6 +112,7 @@ bench_pallet() {
     ;;
     cumulus)
       args=(
+        --bin=parachain-template-node
         --features=runtime-benchmarks
         "${bench_pallet_common_args[@]}"
         --pallet="$pallet"
