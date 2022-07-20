@@ -178,10 +178,11 @@ main() {
   &>/dev/null git remote remove github || :
 
   tmp_dirs=()
-  # Clean up the "github" remote at the end since it contains the $GITHUB_TOKEN
-  # secret, which is only available for protected pipelines on GitLab
   cleanup() {
     exit_code=$?
+    # Clean up the "github" remote at the end since it contains the
+    # $GITHUB_TOKEN secret, which is only available for protected pipelines on
+    # GitLab
     &>/dev/null git remote remove github || :
     rm -rf "${tmp_dirs[@]}"
     exit $exit_code
@@ -196,21 +197,21 @@ main() {
     git remote add \
       github \
       "https://token:${GITHUB_TOKEN}@github.com/${GH_OWNER}/${GH_OWNER_REPO}.git"
-    git pull github "$GH_OWNER_BRANCH"
+    git pull --no-edit github "$GH_OWNER_BRANCH"
     git remote remove github
   fi
 
   # shellcheck disable=SC2119
   cmd_runner_apply_patches
 
-  # https://github.com/paritytech/substrate/pull/10700
-  # https://github.com/paritytech/substrate/blob/b511370572ac5689044779584a354a3d4ede1840/utils/wasm-builder/src/wasm_project.rs#L206
-  export WASM_BUILD_WORKSPACE_HINT="$PWD"
-
   set -x
   # Runs the command to generate the weights
   process_args "$@"
   set +x
+
+  # in case we used diener to patch some dependency during benchmark execution,
+  # revert the patches so that they're not included in the diff
+  git checkout --quiet HEAD Cargo.toml
 
   # Save the generated weights to GitLab artifacts in case commit+push fails
   echo "Showing weights diff for command"

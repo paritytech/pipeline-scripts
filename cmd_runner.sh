@@ -70,8 +70,8 @@ cmd_runner_apply_patches() {
     git remote add \
       github \
       "https://token:${GITHUB_TOKEN}@github.com/${GH_OWNER}/${repository}.git"
-    git fetch github "$ref:to-patch"
-    git checkout to-patch
+    git fetch github "$ref:dependency"
+    git checkout dependency
     git remote remove github
 
     echo "Checked out $ref of repository $repository at commit sha $(git rev-parse HEAD) for patching"
