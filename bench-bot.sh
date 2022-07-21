@@ -37,33 +37,35 @@ bench_pallet() {
     substrate)
       local pallet="$3"
 
-      local pallet_prefix="pallet_"
-
-      local pallet_id
-      if [ "${pallet:0:${#pallet_prefix}}" == "$pallet_prefix" ]; then
-        pallet_id="$pallet"
-      else
-        pallet_id="${pallet_prefix}${pallet}"
-      fi
-
       args=(
         --features=runtime-benchmarks
         --manifest-path=bin/node/cli/Cargo.toml
         "${bench_pallet_common_args[@]}"
-        --pallet="$pallet_id"
+        --pallet="$pallet"
         --chain="$runtime"
       )
 
       case "$kind" in
         pallet)
-          local output_folder
-          if [ "${pallet:0:${#pallet_prefix}}" == "$pallet_prefix" ]; then
-            output_folder="${pallet:${#pallet_prefix}}"
-          else
-            output_folder="$pallet"
+          # Translates e.g. "pallet_foo::bar" to "pallet_foo_bar"
+          local output_dir="${pallet//::/_}"
+
+          # Substrate benchmarks are output to the "frame" directory but they aren't
+          # named exactly after the $pallet argument. For example:
+          # - When $pallet == pallet_balances, the output folder is frame/balances
+          # - When $pallet == frame_benchmarking, the output folder is frame/benchmarking
+          # The common pattern we infer from those examples is that we should remove
+          # the prefix
+          if [[ "$output_dir" =~ ^[A-Za-z]*[^A-Za-z](.*)$ ]]; then
+            output_dir="${BASH_REMATCH[1]}"
           fi
+
+          # We also need to translate '_' to '-' due to the folders' naming
+          # conventions
+          output_dir="${output_dir//_/-}"
+
           args+=(
-            --output="./frame/${output_folder}/src/weights.rs"
+            --output="./frame/$output_dir/src/weights.rs"
             --template=./.maintain/frame-weight-template.hbs
           )
         ;;
