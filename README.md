@@ -150,13 +150,13 @@ The check is currently limited to `cargo check` but optimally it should
 # bench-bot <a name="bench_bot"></a>
 The script through which command-bot runs benchmarks. See https://github.com/paritytech/command-bot#pull-request-command-queue for its usage.
 
-## Infrastrcture <a name="#bench_bot_infra"></a>
+## Infrastructure <a name="#bench_bot_infra"></a>
 
 This bot runs on [bm3 machine](https://gitlab.parity.io/parity/devops/-/blob/462e85a44e9c84064a7f91d1402e499e27e07991/inventory.yaml#L485),
 currently maintained by CI/CD team.
 
 ### Configuration requirements:
-The machine needs to configred as a production gitlab-runer.
+The machine needs to configured as a production gitlab-runer.
 
 Config requirements:
   * gitlab_runner_executor: shell
@@ -170,6 +170,9 @@ the projects' release artifacts require a lot of disk space.
   * install toolchain nightly
   * add wasm target
   * install cmake
+  * install git
+
+Worth checking out [Containerfile for base-ci-linux](https://github.com/paritytech/scripts/tree/master/dockerfiles/base-ci-linux)
 
 All those requirements are saved in an ansible role called `rustup`
 TODO: add link to rustup role once the PR is merged
