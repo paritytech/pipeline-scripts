@@ -125,23 +125,24 @@ bench_pallet() {
         "${bench_pallet_common_args[@]}"
         --pallet="$pallet"
         --chain="${runtime}-dev"
+        --json-file="${ARTIFACTS_DIR}/bench.json"
+        --header=./file_header.txt
       )
+
+      # translates e.g. "pallet_foo::bar" to "pallet_foo_bar"
+      local output_file="${pallet//::/_}"
 
       case "$kind" in
         pallet)
           args+=(
-            --json-file="${ARTIFACTS_DIR}/bench.json"
-            --header=./file_header.txt
-            --output="./parachains/runtimes/$chain_type/$runtime/src/weights"
+            --output="./parachains/runtimes/$chain_type/$runtime/src/weights/${output_file}.rs"
           )
         ;;
         xcm)
           mkdir -p "./parachains/runtimes/$chain_type/$runtime/src/weights/xcm"
           args+=(
             --template=./templates/xcm-bench-template.hbs
-            --json-file="${ARTIFACTS_DIR}/bench.json"
-            --header=./file_header.txt
-            --output="./parachains/runtimes/$chain_type/$runtime/src/weights/xcm"
+            --output="./parachains/runtimes/$chain_type/$runtime/src/weights/xcm/${output_file}.rs"
           )
         ;;
         *)
