@@ -79,7 +79,7 @@ cmd_runner_apply_patches() {
     >/dev/null popd
 
     diener patch \
-      --target "https://github.com/${GH_OWNER}/${GH_OWNER_REPO}" \
+      --target "https://github.com/${GH_OWNER}/$repository" \
       --crates-to-patch "$repository_dir" \
       --path Cargo.toml
   done < <(env)
