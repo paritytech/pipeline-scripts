@@ -1,6 +1,6 @@
 # Companion Build System Dependent Check V2
 
-See the example PRs for a demonstration: https://github.com/paritytech/substrate/pull/11765
+**Demonstrations**
 
 Cumulus integration
   - check-dependent-cumulus: https://gitlab.parity.io/parity/mirrors/substrate/-/jobs/1701832
