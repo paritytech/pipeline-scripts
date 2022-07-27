@@ -7,10 +7,12 @@ else
 fi
 
 die() {
-  if [ "${1:-}" ]; then
-    >&2 echo "$1"
+  local msg="${1:-}"
+  local exit_code="${2:-}"
+  if [ "$msg" ]; then
+    >&2 echo "$msg"
   fi
-  exit 1
+  exit "${exit_code:-1}"
 }
 
 get_arg() {
@@ -74,5 +76,42 @@ get_arg() {
     die "Argument $option_arg is required, but was not found"
   else
     unset out
+  fi
+}
+
+logged_curl() {
+  local url="$1"
+  shift
+
+  >&2 echo "Requesting $url at $(date -u '+%Y-%m-%dT%H:%M:%SZ')"
+
+  local response
+  response="$(curl "$@" "$url")"
+  >&2 echo "Response from $url at $(date -u '+%Y-%m-%dT%H:%M:%SZ'): $response"
+
+  echo "$response"
+}
+
+hash_git_files() {
+  local dir="${1:-}"
+
+  if [ "$dir" ]; then
+    >/dev/null pushd "$dir"
+  fi
+
+  while IFS= read -r file; do
+    local permissions
+    permissions="$(stat -c '%a' "$file")"
+    # Only the first bit coincides after unpacking the GitHub archive for a
+    # given commit. Are we doing something wrong? (might be related to
+    # https://askubuntu.com/questions/463325/what-does-tars-p-preserve-permissions-flag-actually-preserve)
+    # In any case, for pipeline execution purposes, we only need to care about
+    # about the permission bit for the current user
+    permissions="${permissions:0:1}"
+    echo "$permissions $(sha256sum "$file" | awk '{print $1}') $file"
+  done < <(git ls-files)
+
+  if [ "$dir" ]; then
+    >/dev/null popd
   fi
 }
