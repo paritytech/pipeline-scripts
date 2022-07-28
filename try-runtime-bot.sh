@@ -24,7 +24,7 @@ main() {
 
   set -x
   export RUST_LOG="${RUST_LOG:-remote-ext=debug,runtime=trace}"
-  cargo "${preset_args[@]}" -- "$@"
+  cargo "${preset_args[@]}" "$@"
 }
 
 main "$@"
