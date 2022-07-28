@@ -88,7 +88,7 @@ cargo update
 
 # Step 5)
 echo "Run <cargo check> to verify build"
-# cargo check
+cargo check
 
 # Step 6) commit & push to https://github.com/substrate-developer-hub/substrate-*-template
 git config --global user.name substrate-developer-hub
