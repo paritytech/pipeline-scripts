@@ -42,7 +42,7 @@ get_arg required --polkadot-branch "$@"
 polkadot_branch="$out"
 
 target_org="substrate-developer-hub"
-timestamp=`date +%Y-%m-%d_%H-%M-%S`
+timestamp=$(date +%Y-%m-%d_%H-%M-%S)
 default_branch=main
 working_directory="$PWD"
 source_template_path="$working_directory/$template_path"
