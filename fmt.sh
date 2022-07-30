@@ -11,7 +11,7 @@ main() {
   cmd_runner_apply_patches --setup-cleanup true
 
   # format.
-  cargo +nightly fmt;
+  cargo +nightly fmt
 
   # commit.
   git add .
