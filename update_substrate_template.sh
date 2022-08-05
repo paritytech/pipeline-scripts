@@ -88,11 +88,7 @@ diener update --substrate --branch "$polkadot_branch"
 echo "Run <cargo update> to update replaced references in root Cargo.lock"
 cargo update
 
-# Step 5)
-echo "Run <cargo check> to verify build"
-cargo check
-
-# Step 6) commit & push to https://github.com/substrate-developer-hub/substrate-*-template
+# Step 5) commit & push to https://github.com/substrate-developer-hub/substrate-*-template
 git config --global user.name substrate-developer-hub
 git config --global user.email "devops-team@parity.io"
 git remote -v
@@ -102,7 +98,7 @@ commit_message="Auto-Update node-template from $polkadot_branch"
 git commit -m "$commit_message"
 git push origin HEAD
 
-# Step 7) create a pull-request
+# Step 6) create a pull-request
 curl \
   -X POST \
   -H "Accept: application/vnd.github+json" \
