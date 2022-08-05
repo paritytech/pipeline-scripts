@@ -94,7 +94,7 @@ git config --global user.email "devops-team@parity.io"
 git remote -v
 git checkout -b "$template_branch"
 git add .
-commit_message="Auto-Update node-template from $polkadot_branch"
+commit_message="Auto-Update $target_repo_name from $polkadot_branch"
 git commit -m "$commit_message"
 git push origin HEAD
 
