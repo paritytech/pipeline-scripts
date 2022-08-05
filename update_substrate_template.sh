@@ -45,11 +45,13 @@ target_org="substrate-developer-hub"
 timestamp=$(date +%Y-%m-%d_%H-%M-%S)
 default_branch=main
 working_directory="$PWD"
+working_repo="$(basename $PWD)"
 source_template_path="$working_directory/$template_path"
 dest_template_path="$working_directory/$target_repo_name"
 template_branch="autoupdate_${polkadot_branch}_${timestamp}"
 repo_url_with_token="https://$github_api_token@github.com/$target_org/$target_repo_name.git"
 
+echo "working_repo - $working_repo"
 echo "working_directory - $working_directory"
 echo "source_template_path - $source_template_path"
 echo "dest_template_path - $dest_template_path"
@@ -71,8 +73,8 @@ cd "$dest_template_path"
 # stings like 'path = "../../../../frame/system"'
 # but avoid "local" dependencies (from parent folder), like 'path = "../runtime"'
 query_pattern='path = "\.\.\/\.[^"]*"'
-# should be replaced with 'git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.26"'
-replace_ref="git = \"https:\/\/github.com\/paritytech\/substrate.git\", branch = \"${polkadot_branch}\""
+# should be replaced with 'git = "https://github.com/paritytech/substrate.git", branch = "polkadot-v0.9.26"' (or cumulus)
+replace_ref="git = \"https:\/\/github.com\/paritytech\/$working_repo.git\", branch = \"${polkadot_branch}\""
 
 # find all .toml files and replace relative paths to github repo with polkadot branch
 echo "Replacing <$query_pattern> with <$replace_ref> in .toml files"
