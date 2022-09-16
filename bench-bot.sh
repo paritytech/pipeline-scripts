@@ -118,6 +118,63 @@ bench_pallet() {
         ;;
       esac
     ;;
+    kilt-node)
+	  local pallet="$3"
+
+	  args=(
+		--features=runtime-benchmarks
+		"${bench_pallet_common_args[@]}"
+		--pallet="$pallet"
+		--chain="$runtime"
+	  )
+
+	  local runtime_dir
+	  if [ "$runtime" == dev ]; then
+		runtime_dir=peregrine
+	  elif [[ "$runtime" =~ ^(.*)-dev$  ]]; then
+		runtime_dir="spiritnet"
+	  else
+		die "Could not infer weights directory from $runtime"
+	  fi
+	  local weights_dir="./runtimes/${runtime_dir}/src/weights"
+
+	  local output_file=""
+	  if [[ $pallet == *"::"* ]]; then
+		# translates e.g. "pallet_foo::bar" to "pallet_foo_bar"
+		output_file="${pallet//::/_}.rs"
+	  fi
+
+	  case "$kind" in
+		runtime)
+		  args+=(
+			--header=./file_header.txt
+			--output="${weights_dir}/${output_file}"
+		  )
+		;;
+    pallet)
+      # We also need to translate '_' to '-' due to the folders' naming
+      # conventions
+      output_dir="${output_dir//_/-}"
+
+      args+=(
+        --output="./pallets/$output_dir/src/default_weights.rs"
+        --template=./.maintain/weight-template.hbs
+      )
+    ;;
+    *)
+      die "Kind $kind is not supported for $repository in bench_pallet"
+    ;;
+		xcm)
+		  args+=(
+			--template=./xcm/pallet-xcm-benchmarks/template.hbs
+			--output="${weights_dir}/xcm/${output_file}"
+		  )
+		;;
+		*)
+		  die "Kind $kind is not supported for $repository in bench_pallet"
+		;;
+	  esac
+	;;
     cumulus)
       local chain_type="$3"
       local pallet="$4"
