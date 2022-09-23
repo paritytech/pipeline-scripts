@@ -14,7 +14,7 @@ shopt -s inherit_errexit
 . "$(dirname "${BASH_SOURCE[0]}")/utils.sh"
 . "$(dirname "${BASH_SOURCE[0]}")/cmd_runner.sh"
 
-cargo_run_benchmarks="cargo +nightly run --quiet --profile=production"
+cargo_run_benchmarks="cargo +nightly run --locked --quiet --profile=production"
 repository="$(basename "$PWD")"
 
 bench_pallet_common_args=(
