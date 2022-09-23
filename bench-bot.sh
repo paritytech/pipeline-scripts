@@ -14,7 +14,7 @@ shopt -s inherit_errexit
 . "$(dirname "${BASH_SOURCE[0]}")/utils.sh"
 . "$(dirname "${BASH_SOURCE[0]}")/cmd_runner.sh"
 
-cargo_run_benchmarks="cargo +nightly run --quiet --profile=production"
+cargo_run_benchmarks="cargo +nightly run --locked --quiet --profile=production"
 repository="$(basename "$PWD")"
 
 bench_pallet_common_args=(
@@ -94,23 +94,17 @@ bench_pallet() {
       fi
       local weights_dir="./runtime/${runtime_dir}/src/weights"
 
-      local output_file=""
-      if [[ $pallet == *"::"* ]]; then
-        # translates e.g. "pallet_foo::bar" to "pallet_foo_bar"
-        output_file="${pallet//::/_}.rs"
-      fi
-
       case "$kind" in
         runtime)
           args+=(
             --header=./file_header.txt
-            --output="${weights_dir}/${output_file}"
+            --output="${weights_dir}/"
           )
         ;;
         xcm)
           args+=(
             --template=./xcm/pallet-xcm-benchmarks/template.hbs
-            --output="${weights_dir}/xcm/${output_file}"
+            --output="${weights_dir}/xcm/"
           )
         ;;
         *)
@@ -132,23 +126,17 @@ bench_pallet() {
         --header=./file_header.txt
       )
 
-      local output_file=""
-      if [[ $pallet == *"::"* ]]; then
-        # translates e.g. "pallet_foo::bar" to "pallet_foo_bar"
-        output_file="${pallet//::/_}.rs"
-      fi
-
       case "$kind" in
         pallet)
           args+=(
-            --output="./parachains/runtimes/$chain_type/$runtime/src/weights/${output_file}"
+            --output="./parachains/runtimes/$chain_type/$runtime/src/weights/"
           )
         ;;
         xcm)
           mkdir -p "./parachains/runtimes/$chain_type/$runtime/src/weights/xcm"
           args+=(
             --template=./templates/xcm-bench-template.hbs
-            --output="./parachains/runtimes/$chain_type/$runtime/src/weights/xcm/${output_file}"
+            --output="./parachains/runtimes/$chain_type/$runtime/src/weights/xcm/"
           )
         ;;
         *)
