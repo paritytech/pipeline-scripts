@@ -27,6 +27,7 @@ bench_pallet_common_args=(
   --execution=wasm
   --wasm-execution=compiled
   --heap-pages=4096
+  --json-file="${ARTIFACTS_DIR}/bench.json"
 )
 bench_pallet() {
   local kind="$1"
@@ -122,7 +123,6 @@ bench_pallet() {
         "${bench_pallet_common_args[@]}"
         --pallet="$pallet"
         --chain="${runtime}-dev"
-        --json-file="${ARTIFACTS_DIR}/bench.json"
         --header=./file_header.txt
       )
 
