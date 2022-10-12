@@ -83,4 +83,4 @@ function feature_does_not_imply() {
 	exit 1
 }
 
-main "$@"; exit
+main "$@"
