@@ -23,28 +23,24 @@
 
 set -eu
 
-# Check that cargo, grep and egrep are installed.
+# Check that cargo and grep are installed - error otherwise.
 command -v cargo >/dev/null 2>&1 || { echo >&2 "cargo is required but not installed. Aborting."; exit 1; }
 command -v grep >/dev/null 2>&1 || { echo >&2 "grep is required but not installed. Aborting."; exit 1; }
-command -v egrep >/dev/null 2>&1 || { echo >&2 "egrep is required but not installed. Aborting."; exit 1; }
 
-CARGO_ROOT=$1
-cd "$CARGO_ROOT"
+# Enter the workspace root folder.
+cd "$1"
+echo "Workspace root is $PWD"
 
-# NOTE: The features should be separated by a single `,`.
-declare -a FEATURE_RULES=(
-	"default,std never implies feature runtime-benchmarks"
-	"default,std never implies feature try-runtime"
-)
-
-function check_does_not_imply() {
+# Accepts two feature names as arguments.
+# Checks that the first feature does not imply the second one.
+function feature_does_not_imply() {
 	ENABLED=$1
 	STAYS_DISABLED=$2
 	echo "📏 Checking that $ENABLED does not imply $STAYS_DISABLED ..."
 
 	RET=0
 	# Check if the forbidden feature is enabled anywhere in the workspace.
-	cargo tree --no-default-features --locked --workspace -e features --features "$ENABLED" | grep -q "feature \"$STAYS_DISABLED\"" || RET=$?
+	cargo tree --no-default-features --locked --workspace -e features --features "$ENABLED" | grep -qF "feature \"$STAYS_DISABLED\"" || RET=$?
 	if [ $RET -ne 0 ]; then
 		echo "✅ $ENABLED does not imply $STAYS_DISABLED in the workspace"
 		return
@@ -54,43 +50,36 @@ function check_does_not_imply() {
 
 	# Find all Cargo.toml files but exclude the root one since we know that it is broken.
 	CARGOS=`find . -name Cargo.toml -not -path ./Cargo.toml`
+	NUM_CRATES=`echo "$CARGOS" | wc -l`
 	FAILED=0
 	PASSED=0
-	# number of all cargos
-	echo "🔍 Checking individual crates - this takes some time."
+	echo "🔍 Checking all $NUM_CRATES crates - this takes some time."
 
 	for CARGO in $CARGOS; do
-		RET=0
 		OUTPUT=$(cargo tree --no-default-features --locked --offline -e features --features $ENABLED --manifest-path $CARGO 2>&1 || true)
-		IS_NOT_SUPPORTED=$(echo $OUTPUT | grep -q "not supported for packages in this workspace" || echo $?)
+		IS_NOT_SUPPORTED=$(echo $OUTPUT | grep -qF "not supported for packages in this workspace" || echo $?)
 
 		if [ $IS_NOT_SUPPORTED -eq 0 ]; then
 			# This case just means that the pallet does not support the
 			# requested feature which is fine.
 			PASSED=$((PASSED+1))
-		elif echo "$OUTPUT" | grep -q "feature \"$STAYS_DISABLED\""; then
+		elif echo "$OUTPUT" | grep -qF "feature \"$STAYS_DISABLED\""; then
 			echo "❌ Violation in $CARGO by dependency:"
 			# Best effort hint for which dependency needs to be fixed.
-			echo "$OUTPUT" | grep -w "feature \"$STAYS_DISABLED\"" | head -n 1
+			echo "$OUTPUT" | grep -wF "feature \"$STAYS_DISABLED\"" | head -n 1
 			FAILED=$((FAILED+1))
 		else
 			PASSED=$((PASSED+1))
 		fi
 	done
 
-	TOTAL=$((PASSED + FAILED))
-	echo "Checked $TOTAL crates in total of which $FAILED failed and $PASSED passed."
+	echo "Checked $NUM_CRATES crates in total of which $FAILED failed and $PASSED passed."
 	echo "Exiting with code 1"
 	exit 1
 }
 
-for RULE in "${FEATURE_RULES[@]}"; do
-    read -a splits <<< "$RULE"
-	ENABLED=${splits[0]}
-	STAYS_DISABLED=${splits[4]}
-	# Split ENABLED at , and check each one.
-	IFS=',' read -ra ENABLED_SPLIT <<< "$ENABLED"
-	for ENABLED_SPLIT in "${ENABLED_SPLIT[@]}"; do
-		check_does_not_imply "$ENABLED_SPLIT" "$STAYS_DISABLED"
-	done	
-done
+# Define all rules that we want to check.
+feature_does_not_imply 'default' 'runtime-benchmarks'
+feature_does_not_imply 'std' 'runtime-benchmarks'
+feature_does_not_imply 'default' 'try-runtime'
+feature_does_not_imply 'std' 'try-runtime'
