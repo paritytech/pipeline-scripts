@@ -62,9 +62,8 @@ function feature_does_not_imply() {
 
 	for CARGO in $CARGOS; do
 		OUTPUT=$(cargo tree --no-default-features --locked --offline -e features --features $ENABLED --manifest-path $CARGO 2>&1 || true)
-		IS_NOT_SUPPORTED=$(echo $OUTPUT | grep -qF "not supported for packages in this workspace" || echo $?)
 
-		if [ $IS_NOT_SUPPORTED -eq 0 ]; then
+		if echo "$OUTPUT" | grep -qF "not supported for packages in this workspace"; then
 			# This case just means that the pallet does not support the
 			# requested feature which is fine.
 			PASSED=$((PASSED+1))
