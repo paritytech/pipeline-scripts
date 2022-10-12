@@ -23,13 +23,20 @@
 
 set -eu
 
-# Check that cargo and grep are installed - error otherwise.
+# Check that cargo and grep are installed - otherwise abort.
 command -v cargo >/dev/null 2>&1 || { echo >&2 "cargo is required but not installed. Aborting."; exit 1; }
 command -v grep >/dev/null 2>&1 || { echo >&2 "grep is required but not installed. Aborting."; exit 1; }
 
 # Enter the workspace root folder.
 cd "$1"
 echo "Workspace root is $PWD"
+
+function main() {
+	feature_does_not_imply 'default' 'runtime-benchmarks'
+	feature_does_not_imply 'std' 'runtime-benchmarks'
+	feature_does_not_imply 'default' 'try-runtime'
+	feature_does_not_imply 'std' 'try-runtime'
+}
 
 # Accepts two feature names as arguments.
 # Checks that the first feature does not imply the second one.
@@ -38,17 +45,15 @@ function feature_does_not_imply() {
 	STAYS_DISABLED=$2
 	echo "📏 Checking that $ENABLED does not imply $STAYS_DISABLED ..."
 
-	RET=0
 	# Check if the forbidden feature is enabled anywhere in the workspace.
-	cargo tree --no-default-features --locked --workspace -e features --features "$ENABLED" | grep -qF "feature \"$STAYS_DISABLED\"" || RET=$?
-	if [ $RET -ne 0 ]; then
+	if cargo tree --no-default-features --locked --workspace -e features --features "$ENABLED" | grep -qF "feature \"$STAYS_DISABLED\""; then
+		echo "❌ $ENABLED implies $STAYS_DISABLED in the workspace"
+	else
 		echo "✅ $ENABLED does not imply $STAYS_DISABLED in the workspace"
 		return
-	else
-		echo "❌ $ENABLED implies $STAYS_DISABLED in the workspace"
 	fi
 
-	# Find all Cargo.toml files but exclude the root one since we know that it is broken.
+	# Find all Cargo.toml files but exclude the root one since we already know that it is broken.
 	CARGOS=`find . -name Cargo.toml -not -path ./Cargo.toml`
 	NUM_CRATES=`echo "$CARGOS" | wc -l`
 	FAILED=0
@@ -78,8 +83,4 @@ function feature_does_not_imply() {
 	exit 1
 }
 
-# Define all rules that we want to check.
-feature_does_not_imply 'default' 'runtime-benchmarks'
-feature_does_not_imply 'std' 'runtime-benchmarks'
-feature_does_not_imply 'default' 'try-runtime'
-feature_does_not_imply 'std' 'try-runtime'
+main "$@"; exit
