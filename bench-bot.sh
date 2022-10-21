@@ -66,6 +66,7 @@ bench_pallet() {
           output_dir="${output_dir//_/-}"
 
           args+=(
+            --header="./HEADER-APACHE2"
             --output="./frame/$output_dir/src/weights.rs"
             --template=./.maintain/frame-weight-template.hbs
           )
@@ -104,6 +105,7 @@ bench_pallet() {
         ;;
         xcm)
           args+=(
+            --header=./file_header.txt
             --template=./xcm/pallet-xcm-benchmarks/template.hbs
             --output="${weights_dir}/xcm/"
           )
