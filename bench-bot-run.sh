@@ -173,6 +173,7 @@ bench_overhead() {
     substrate)
       args=(
         "${bench_overhead_common_args[@]}"
+        --header=./HEADER-APACHE2
         --weight-path="./frame/support/src/weights"
         --chain="dev"
       )
@@ -181,6 +182,7 @@ bench_overhead() {
       local runtime="$2"
       args=(
         "${bench_overhead_common_args[@]}"
+        --header=./file_header.txt
         --weight-path="./runtime/$runtime/constants/src/weights"
         --chain="$runtime-dev"
       )
@@ -192,6 +194,7 @@ bench_overhead() {
       args=(
         --bin=polkadot-parachain
         "${bench_overhead_common_args[@]}"
+        --header=./file_header.txt
         --weight-path="./cumulus/parachains/runtimes/$chain_type/$runtime/src/weights"
         --chain="$runtime"
       )
