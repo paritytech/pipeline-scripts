@@ -190,6 +190,7 @@ bench_overhead() {
       local runtime="$3"
 
       args=(
+        --bin=polkadot-parachain
         "${bench_overhead_common_args[@]}"
         --weight-path="./cumulus/parachains/runtimes/$chain_type/$runtime/src/weights"
         --chain="$runtime"
