@@ -23,6 +23,9 @@ changes.
 set -eu -o pipefail
 shopt -s inherit_errexit
 
+# install diener 0.4.4
+cargo install --git https://github.com/paritytech/diener --rev fb4833ae21c3e415c4ca604fb72533013887d4a4
+
 . "$(dirname "${BASH_SOURCE[0]}")/utils.sh"
 . "$(dirname "${BASH_SOURCE[0]}")/github_graphql.sh"
 
