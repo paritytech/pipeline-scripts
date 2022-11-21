@@ -8,7 +8,7 @@ shopt -s inherit_errexit
 . "$(dirname "${BASH_SOURCE[0]}")/utils.sh"
 . "$(dirname "${BASH_SOURCE[0]}")/cmd_runner.sh"
 
-cargo_run_benchmarks="cargo run --locked --quiet --profile=kilt-parachain"
+cargo_run_benchmarks="cargo run --locked --quiet"
 current_folder="$(basename "$PWD")"
 
 get_arg optional --repo "$@"
@@ -124,6 +124,7 @@ bench_pallet() {
   	  local pallet="$3"
 
   	  args=(
+      -p=kilt-parachain
   		--features=runtime-benchmarks
   		"${bench_pallet_common_args[@]}"
   		--pallet="$pallet"
