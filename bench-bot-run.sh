@@ -124,6 +124,7 @@ bench_pallet() {
   	  local pallet="$3"
 
   	  args=(
+      -p kilt-parachain
   		--features=runtime-benchmarks
   		"${bench_pallet_common_args[@]}"
   		--pallet="$pallet"
