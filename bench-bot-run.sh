@@ -120,7 +120,7 @@ bench_pallet() {
         ;;
       esac
     ;;
-  mashnet-node)
+  kilt-node)
   	  local pallet="$3"
 
   	  args=(
