@@ -131,7 +131,7 @@ bench_pallet() {
   	  )
 
   	  local runtime_dir
-  	  if [ "$runtime" == dev ]; then
+  	  if [ "$runtime" == peregrine ]; then
   		runtime_dir=peregrine
   	  elif [[ "$runtime" =~ ^(.*)-dev$  ]]; then
   		runtime_dir="spiritnet"
