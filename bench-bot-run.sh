@@ -156,7 +156,7 @@ bench_pallet() {
       pallet)
         # We also need to translate '_' to '-' due to the folders' naming
         # conventions
-        output_dir="${output_dir//_/-}"
+        # output_dir="${output_dir//_/-}"
 
         args+=(
           --output="./pallets/$output_dir/src/default_weights.rs"
