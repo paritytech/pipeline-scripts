@@ -8,7 +8,7 @@ shopt -s inherit_errexit
 . "$(dirname "${BASH_SOURCE[0]}")/utils.sh"
 . "$(dirname "${BASH_SOURCE[0]}")/cmd_runner.sh"
 
-cargo_run_benchmarks="cargo run --locked --quiet --profile=production"
+cargo_run_benchmarks="cargo run --locked --quiet"
 current_folder="$(basename "$PWD")"
 
 get_arg optional --repo "$@"
@@ -129,6 +129,7 @@ bench_pallet() {
       fi
 
   	  args=(
+      -p=kilt-parachain
   		--features=runtime-benchmarks
   		"${bench_pallet_common_args[@]}"
   		--pallet="$pallet"
@@ -136,7 +137,7 @@ bench_pallet() {
   	  )
 
   	  local runtime_dir
-  	  if [ "$runtime" == dev ]; then
+  	  if [ "$runtime" == peregrine ]; then
   		runtime_dir=peregrine
   	  elif [[ "$runtime" =~ ^(.*)-dev$  ]]; then
   		runtime_dir="spiritnet"
@@ -161,7 +162,7 @@ bench_pallet() {
       pallet)
         # We also need to translate '_' to '-' due to the folders' naming
         # conventions
-        output_dir="${output_dir//_/-}"
+        local output_dir="${pallet//_/-}"
 
         args+=(
           --output="./pallets/$output_dir/src/default_weights.rs"
