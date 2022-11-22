@@ -122,12 +122,17 @@ bench_pallet() {
     ;;
   kilt-node)
   	  local pallet="$3"
+  	  if [ "$runtime" == peregrine ]; then
+      chain=dev
+      else
+      chain=spiritnet-dev
+      fi
 
   	  args=(
   		--features=runtime-benchmarks
   		"${bench_pallet_common_args[@]}"
   		--pallet="$pallet"
-  		--chain="$runtime"
+  		--chain="$chain"
   	  )
 
   	  local runtime_dir
