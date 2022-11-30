@@ -1,16 +1,25 @@
 #!/usr/bin/env bash
 
-## A script that runs "cargo check" for each workspace crate individually.
-## It's relevant to check workspace crates individually because otherwise their compilation problems
-## due to feature misconfigurations won't be caught, as exemplified by
-## https://github.com/paritytech/substrate/issues/12705
+## A script that runs "cargo check" for each workspace crate individually. It's
+## relevant to check workspace crates individually because otherwise their
+## compilation problems due to feature misconfigurations won't be caught, as
+## exemplified by https://github.com/paritytech/substrate/issues/12705.
+## Crates are partitioned into groups based on $target_group and $groups_total,
+## where each group has ($crates_total / $groups_total) crates within it. Those
+## groups can be used in parallel for speeding up the checks' overall time to
+## completion while minimizing redundant work between runners.
+## For example usage within GitLab CI, see:
+## https://github.com/paritytech/substrate/blob/f80c370cdce7c996e8bf8710b6522dac639fbab0/scripts/ci/gitlab/pipeline/test.yml#L427
 
 set -Eeu -o pipefail
 shopt -s inherit_errexit
 
 set -vx
 
+# $target_group is the number of the group to be executed in this run, from
+# 1..$groups_total (inclusive)
 target_group="$1"
+# $groups_total is the total amount of groups
 groups_total="$2"
 
 readarray -t workspace_crates < <(\
