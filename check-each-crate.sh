@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-## A script that checks each workspace crate individually.
+## A script that runs "cargo check" for each workspace crate individually.
 ## It's relevant to check workspace crates individually because otherwise their compilation problems
 ## due to feature misconfigurations won't be caught, as exemplified by
 ## https://github.com/paritytech/substrate/issues/12705
