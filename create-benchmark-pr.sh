@@ -2,6 +2,9 @@
 
 ## A script that generates a link to the weights comparison tool, then creates a
 ## PR with the generated link in its description.
+## Its usage started in Cumulus to create a PR for updating weights generated from CI jobs:
+## https://github.com/paritytech/cumulus/blob/e4855e352f972f59a2d5941d7bce2d5174ab34ee/scripts/ci/gitlab/pipeline/benchmarks.yml#L31
+## See https://github.com/paritytech/cumulus/pull/1789 for an example of using it.
 
 set -Eeu -o pipefail
 shopt -s inherit_errexit
