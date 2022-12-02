@@ -43,12 +43,16 @@ cmd_runner_apply_patches() {
 
   local repositories_dir=".git/cmd-runner-patch"
   tmp_dirs+=("$repositories_dir")
+  unset BENCH_PATCHED
 
   while IFS= read -r line; do
     if ! [[ "$line" =~ ^PATCH_([^=]+)=(.*)$ ]]; then
       continue
     fi
     echo "Matched environment variable for patching: $line"
+
+    # used later to decide whether to use "--locked" flag for `cargo run`
+    export BENCH_PATCHED=1
 
     local repository="${BASH_REMATCH[1]}"
     local branch="${BASH_REMATCH[2]}"

@@ -19,6 +19,11 @@ echo "Repo: $repository"
 cargo_run() {
   echo "Running $cargo_run_benchmarks" "${args[@]}"
 
+  # if not patched with PATCH_something=123 then use --locked
+  if [[ -z "${BENCH_PATCHED:-}" ]]; then
+    cargo_run_benchmarks+=" --locked"
+  fi
+
   $cargo_run_benchmarks "${args[@]}"
 }
 
