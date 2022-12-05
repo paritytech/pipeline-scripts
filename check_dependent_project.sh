@@ -420,6 +420,23 @@ patch_and_check_dependent() {
       --crates-to-patch "$this_repo_dir" \
       --path "$companions_dir/$comp/Cargo.toml"
 
+    # Update all references in the Cargo.lock of the companion for the crates
+    # which were just patched. Since the companion will be patched into the
+    # dependent in the following step, doing this avoids having cargo resolve
+    # two versions for patched crates which are used in both the companion as
+    # well as the dependent, as shown in:
+    # https://gitlab.parity.io/parity/mirrors/substrate/-/jobs/2115137#L1544
+    local comp_update_args=(--manifest-path "$companions_dir/$comp/Cargo.toml")
+    while IFS= read -r crate; do
+      comp_update_args+=(-p "$crate")
+    done < <(
+      cargo tree --quiet --workspace --depth 0 --manifest-path "$companions_dir/$comp/Cargo.toml" |
+      awk '{ if (length($1) == 0 || substr($1, 1, 1) == "[") { skip } else { print $1 } }' |
+      sort |
+      uniq
+    )
+    cargo update "${comp_update_args[@]}"
+
     echo "Patching $comp companion into $dependent"
     diener patch \
       --target "$org_github_prefix/$comp" \
