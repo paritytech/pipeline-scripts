@@ -450,6 +450,7 @@ patch_and_check_dependent() {
   # would not yet how be how it should become after all merges are finished.
   match_dependent_crates "$dependent"
 
+  export WASM_WORKSPACE_BUILD_HINT="$PWD"
   eval "${COMPANION_CHECK_COMMAND:-cargo check --all-targets --workspace}"
 
   popd >/dev/null
