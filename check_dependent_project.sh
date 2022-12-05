@@ -220,9 +220,9 @@ process_pr_description_line() {
       return
     fi
 
-    # if [ "$mergeable" != "true" ]; then
-    #   die "Github API says $repo#$pr_number is not mergeable"
-    # fi
+    if [ "$mergeable" != "true" ]; then
+      die "Github API says $repo#$pr_number is not mergeable"
+    fi
 
     companions+=("$repo")
 
