@@ -46,7 +46,8 @@ function feature_does_not_imply() {
 	echo "📏 Checking that $ENABLED does not imply $STAYS_DISABLED ..."
 
 	# Check if the forbidden feature is enabled anywhere in the workspace.
-	if cargo tree --no-default-features --locked --workspace -e features --features "$ENABLED" | grep -qF "feature \"$STAYS_DISABLED\""; then
+	# But only check "normal" dependencies, so no "dev" or "build" dependencies.
+	if cargo tree --no-default-features --locked --workspace -e features,normal --features "$ENABLED" | grep -qF "feature \"$STAYS_DISABLED\""; then
 		echo "❌ $ENABLED implies $STAYS_DISABLED in the workspace"
 	else
 		echo "✅ $ENABLED does not imply $STAYS_DISABLED in the workspace"
@@ -61,7 +62,7 @@ function feature_does_not_imply() {
 	echo "🔍 Checking all $NUM_CRATES crates - this takes some time."
 
 	for CARGO in $CARGOS; do
-		OUTPUT=$(cargo tree --no-default-features --locked --offline -e features --features $ENABLED --manifest-path $CARGO 2>&1 || true)
+		OUTPUT=$(cargo tree --no-default-features --locked --offline -e features,normal --features $ENABLED --manifest-path $CARGO 2>&1 || true)
 
 		if echo "$OUTPUT" | grep -qF "not supported for packages in this workspace"; then
 			# This case just means that the pallet does not support the
