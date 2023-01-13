@@ -61,14 +61,17 @@ merge_remote_ref() {
   local message="$3"
 
   git show-ref "$remote"/"$ref"
-  if ! \
-    git merge "$remote"/"$ref" \
+
+  local merge_exit_code
+
+  git merge \
+    "$remote"/"$ref" \
       --verbose \
       --no-edit \
-      -m "$message"
-  then
-    local exit_code=$?
+      -m "$message" \
+    || merge_exit_code=$?
 
+  if [ "${merge_exit_code:-0}" != 0 ]; then
     echo "
 Failed to merge $ref into $repo#$pr_number after fetching its last $merge_ancestor_max_depth commits.
 
@@ -80,8 +83,7 @@ OR
 
 - $repo#$pr_number is ahead of master by more than $merge_ancestor_max_depth commits. To solve this you can merge master into the branch locally and push.
 "
-
-    exit $exit_code
+    exit $merge_exit_code
   fi
 }
 
