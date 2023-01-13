@@ -629,6 +629,7 @@ main() {
     # Since master's HEAD is being merged here, at the start the dependency chain,
     # the same has to be done for all the companions because they might have
     # accompanying changes for the code being brought in.
+    git fetch --force origin master
     merge_remote_ref origin master "Merge master into $this_repo#$CI_COMMIT_REF_NAME"
   fi
 
