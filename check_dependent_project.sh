@@ -50,7 +50,40 @@ github_api="https://api.github.com"
 github_graphql_api="https://api.github.com/graphql"
 org_github_prefix="https://github.com/$org"
 org_crates_prefix="git+$org_github_prefix"
+# Heuristic: assume the companion PR has a common merge ancestor with master
+# in its last N commits.
+merge_ancestor_max_depth=256
 set +x
+
+merge_remote_ref() {
+  local remote="$1"
+  local ref="$2"
+  local message="$3"
+
+  git show-ref "$remote"/"$ref"
+  if ! \
+    git merge "$remote"/"$ref" \
+      --verbose \
+      --no-edit \
+      -m "$message"
+  then
+    local exit_code=$?
+
+    echo "
+Failed to merge $ref into $repo#$pr_number after fetching its last $merge_ancestor_max_depth commits.
+
+This problem can happen if:
+
+- $repo#$pr_number has conflicts with master. To solve this problem you should merge master into the PR, solve the conflicts and push.
+
+OR
+
+- $repo#$pr_number is ahead of master by more than $merge_ancestor_max_depth commits. To solve this you can merge master into the branch locally and push.
+"
+
+    exit $exit_code
+  fi
+}
 
 our_crates=()
 discover_our_crates() {
@@ -226,10 +259,6 @@ process_pr_description_line() {
 
     companions+=("$repo")
 
-    # Heuristic: assume the companion PR has a common merge ancestor with master
-    # in its last N commits.
-    local merge_ancestor_max_depth=100
-
     # Clone the default branch of this companion's target repository (assumed to
     # be named "master")
     git clone \
@@ -246,24 +275,7 @@ process_pr_description_line() {
     git fetch --depth=$merge_ancestor_max_depth origin "pull/$pr_number/head:$ref"
     git checkout "$ref"
 
-echo "
-Attempting to merge $repo#$pr_number with master after fetching its last $merge_ancestor_max_depth commits.
-
-If this step fails, either:
-
-- $repo#$pr_number has conflicts with master
-
-OR
-
-- A common merge ancestor could not be found between master and the last $merge_ancestor_max_depth commits of $repo#$pr_number.
-
-Both cases can be solved by merging master into $repo#$pr_number.
-"
-    git show-ref origin/master
-    git merge origin/master \
-      --verbose \
-      --no-edit \
-      -m "Merge master of $repo into companion $repo#$pr_number"
+    merge_remote_ref origin master "Merge master of $repo into companion $repo#$pr_number"
 
     popd >/dev/null
 
@@ -617,13 +629,7 @@ main() {
     # Since master's HEAD is being merged here, at the start the dependency chain,
     # the same has to be done for all the companions because they might have
     # accompanying changes for the code being brought in.
-    git fetch --force origin master
-    git show-ref origin/master
-    echo "Merge master into $this_repo#$CI_COMMIT_REF_NAME"
-    git merge origin/master \
-      --verbose \
-      --no-edit \
-      -m "Merge master into $this_repo#$CI_COMMIT_REF_NAME"
+    merge_remote_ref origin master "Merge master into $this_repo#$CI_COMMIT_REF_NAME"
   fi
 
   discover_our_crates
