@@ -477,9 +477,9 @@ patch_and_check_dependent() {
 }
 
 main() {
-  local this_pr
+  local this_pr_number
   if [[ "$CI_COMMIT_REF_NAME" =~ ^[[:digit:]]+$ ]]; then
-    this_pr="$CI_COMMIT_REF_NAME"
+    this_pr_number="$CI_COMMIT_REF_NAME"
   else
     die "\"$CI_COMMIT_REF_NAME\" was not recognized as a pull request ref"
   fi
@@ -492,7 +492,7 @@ main() {
   # process_pr_description calls itself for each companion in the description on
   # each detected companion PR, effectively considering all companion references
   # on all PRs
-  process_pr_description "$this_repo" "$this_pr"
+  process_pr_description "$this_repo" "$this_pr_number"
 
   # This PR might be targetting a custom ref (i.e. not master) through companion
   # overrides from --companion-overrides or the PR's description, in which case
@@ -645,8 +645,8 @@ main() {
       origin \
       master \
       "$this_repo" \
-      "$this_pr" \
-      "Merge master into $this_repo#$this_pr"
+      "$this_pr_number" \
+      "Merge master into $this_repo#$this_pr_number"
   fi
 
   discover_our_crates
