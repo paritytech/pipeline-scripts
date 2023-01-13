@@ -58,12 +58,13 @@ set +x
 merge_remote_ref() {
   local remote="$1"
   local ref="$2"
-  local message="$3"
+  local repo="$3"
+  local pr_number="$4"
+  local message="$5"
 
   git show-ref "$remote"/"$ref"
 
   local merge_exit_code
-
   git merge \
     "$remote"/"$ref" \
       --verbose \
@@ -277,7 +278,12 @@ process_pr_description_line() {
     git fetch --depth=$merge_ancestor_max_depth origin "pull/$pr_number/head:$ref"
     git checkout "$ref"
 
-    merge_remote_ref origin master "Merge master of $repo into companion $repo#$pr_number"
+    merge_remote_ref \
+      origin \
+      master \
+      "$repo" \
+      "$pr_number" \
+      "Merge master of $repo into companion $repo#$pr_number"
 
     popd >/dev/null
 
@@ -471,7 +477,10 @@ patch_and_check_dependent() {
 }
 
 main() {
-  if ! [[ "$CI_COMMIT_REF_NAME" =~ ^[[:digit:]]+$ ]]; then
+  local this_pr
+  if [[ "$CI_COMMIT_REF_NAME" =~ ^[[:digit:]]+$ ]]; then
+    this_pr="$CI_COMMIT_REF_NAME"
+  else
     die "\"$CI_COMMIT_REF_NAME\" was not recognized as a pull request ref"
   fi
 
@@ -483,7 +492,7 @@ main() {
   # process_pr_description calls itself for each companion in the description on
   # each detected companion PR, effectively considering all companion references
   # on all PRs
-  process_pr_description "$this_repo" "$CI_COMMIT_REF_NAME"
+  process_pr_description "$this_repo" "$this_pr"
 
   # This PR might be targetting a custom ref (i.e. not master) through companion
   # overrides from --companion-overrides or the PR's description, in which case
@@ -632,7 +641,12 @@ main() {
     # the same has to be done for all the companions because they might have
     # accompanying changes for the code being brought in.
     git fetch --force origin master
-    merge_remote_ref origin master "Merge master into $this_repo#$CI_COMMIT_REF_NAME"
+    merge_remote_ref \
+      origin \
+      master \
+      "$this_repo" \
+      "$this_pr" \
+      "Merge master into $this_repo#$this_pr"
   fi
 
   discover_our_crates
