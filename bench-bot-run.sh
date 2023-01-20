@@ -139,7 +139,7 @@ bench_pallet() {
   	  local runtime_dir
   	  if [ "$runtime" == peregrine ]; then
   		runtime_dir=peregrine
-  	  elif [[ "$runtime" =~ ^(.*)-dev$  ]]; then
+  	  elif [[ "$runtime" ==spiritnet ]]; then
   		runtime_dir="spiritnet"
   	  else
   		die "Could not infer weights directory from $runtime"
