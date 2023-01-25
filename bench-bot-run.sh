@@ -155,7 +155,6 @@ bench_pallet() {
   	  case "$kind" in
   		runtime)
   		  args+=(
-  			--header=./file_header.txt
   			--output="${weights_dir}/${output_file}"
   		  )
   		;;
