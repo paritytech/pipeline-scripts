@@ -1,5 +1,7 @@
 # Introduction
 
+[![GitHub Issue Sync](https://github.com/paritytech/pipeline-scripts/actions/workflows/github-issue-sync.yml/badge.svg)](https://github.com/paritytech/pipeline-scripts/actions/workflows/github-issue-sync.yml)
+
 This repository hosts reusable scripts (that is, scripts which are useful for
 many repositories) for our CI pipelines.
 
