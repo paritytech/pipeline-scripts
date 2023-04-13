@@ -23,14 +23,6 @@
 
 set -eu -o pipefail
 
-# TODO: manual diener installation should be removed after
-# https://github.com/paritytech/scripts/pull/506 is merged and the ci-linux
-# image is rebuilt
-mkdir -p "$HOME/.cargo-bin"
-export PATH="$HOME/.cargo-bin/bin:$PATH"
-cargo install diener --root "$HOME/.cargo-bin" --version 0.4.6
-diener --version
-
 . "$(dirname "${BASH_SOURCE[0]}")/utils.sh"
 
 # substrate-parachain-template or substrate-node-template
