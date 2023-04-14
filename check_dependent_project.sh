@@ -471,7 +471,7 @@ patch_and_check_dependent() {
   match_dependent_crates "$dependent"
 
   export WASM_BUILD_WORKSPACE_HINT="$PWD"
-  eval "${COMPANION_CHECK_COMMAND:-cargo check --all-targets --workspace}"
+  eval "${COMPANION_CHECK_COMMAND:-cargo check --locked --all-targets --workspace}"
 
   popd >/dev/null
 }
