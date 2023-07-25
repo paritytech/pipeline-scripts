@@ -85,8 +85,8 @@ find . -type f -name '*.toml' -exec sed -i -E "s/$query_pattern/$replace_ref/g" 
 diener update --substrate --branch "$polkadot_branch"
 
 # Step 4)
-echo "Run <cargo update> to update replaced references in root Cargo.lock"
-cargo update
+echo "Run <cargo generate-lockfile> to update replaced references in root Cargo.lock"
+cargo generate-lockfile
 
 # Step 5) commit & push to https://github.com/substrate-developer-hub/substrate-*-template
 git config --global user.name substrate-developer-hub
