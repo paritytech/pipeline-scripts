@@ -414,6 +414,10 @@ patch_and_check_dependent() {
     --crates-to-patch "$this_repo_dir" \
     --path Cargo.toml
 
+  # ***************
+  # NOTE: PROCESSBOT PROJECT IS DECOMMISSIONED, SO ANYTHING REGARDING THAT IS NOT
+  # THE CASE ANY MORE.
+  # ***************
   # The next step naturally only makes sense if a companion PR was specified for
   # the dependent being targeted by this check, because then processbot will be
   # able to push the lockfile updates to that PR while taking into account
